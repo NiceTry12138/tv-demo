@@ -21,7 +21,7 @@ buildCatalog -- 同频道多源合并、去重
 storage -- 临时文件发布、保留上一版本
        |
        v
-HTTP server -- channels/status/health
+HTTP server -- channels/status/health/readiness
 ```
 
 - `src/m3u.ts`：解析 `#EXTINF`、`#EXTVLCOPT`、`#EXTHTTP`；按 `tvg-id` 或频道名合并。
@@ -70,13 +70,26 @@ npm run sync
 GET /iptv/v1/channels.json  App 使用的频道数据
 GET /iptv/v1/status.json    同步状态、频道数、源数量
 GET /healthz                进程存活检查
+GET /readyz                 是否已有可提供的频道目录
 ```
+
+完整响应结构、状态码和 ETag 用法见 [HTTP API](docs/API.md)。
+
+## Ubuntu 22.04 部署
+
+推荐使用 `systemd + Nginx + HTTPS`。完整命令见
+[Ubuntu 22.04 部署文档](docs/UBUNTU_DEPLOY.md)。部署文件位于 `deploy/`：
+
+- `deploy/systemd/home-tv-server.service`
+- `deploy/home-tv-server.env.example`
+- `deploy/nginx/home-tv-server.conf`
 
 ## Docker 部署
 
 ```bash
 docker compose up -d --build
 curl http://127.0.0.1:8080/healthz
+curl http://127.0.0.1:8080/readyz
 curl http://127.0.0.1:8080/iptv/v1/status.json
 ```
 
@@ -87,4 +100,4 @@ Compose 只绑定服务器本机 `127.0.0.1:8080`。用 Caddy 或 Nginx 反向�
 https://your-domain.example/iptv/v1/channels.json
 ```
 
-`server/data` 必须使用持久化磁盘，否则容器重建会丢失上次成功数据。
+Compose 使用 `home-tv-data` 命名卷保存数据。删除该卷会丢失上次成功频道目录；普通容器重建不会。

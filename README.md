@@ -43,8 +43,10 @@ npm run dev
 - `GET /iptv/v1/channels.json`
 - `GET /iptv/v1/status.json`
 - `GET /healthz`
+- `GET /readyz`
 
-详细配置和部署见 [Server README](server/README.md)。
+详细配置见 [Server README](server/README.md)，Ubuntu 22.04 部署见
+[部署文档](server/docs/UBUNTU_DEPLOY.md)。
 
 ## App 连接服务器
 

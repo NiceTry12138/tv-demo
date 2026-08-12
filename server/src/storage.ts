@@ -1,4 +1,4 @@
-import { copyFile, mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ChannelCatalog, ServiceStatus } from "./models.js";
 
@@ -43,5 +43,13 @@ export async function readStatus(dataDir: string, upstream: string): Promise<Ser
       sourceCount: 0,
       error: null
     };
+  }
+}
+
+export async function isCatalogReady(dataDir: string): Promise<boolean> {
+  try {
+    return (await stat(join(dataDir, CHANNELS_FILE))).size > 0;
+  } catch {
+    return false;
   }
 }

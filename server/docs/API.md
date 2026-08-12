@@ -1,0 +1,81 @@
+# HTTP API
+
+服务默认只监听 `127.0.0.1:8080`（生产 systemd 配置），公网由 Nginx 提供 HTTPS。
+所有业务接口只读，支持 `GET` 和 `HEAD`。
+
+## `GET /iptv/v1/channels.json`
+
+Android TV App 使用的频道目录。首次同步未完成时返回 `503`。成功响应：
+
+```json
+{
+  "version": "2026-08-13T01:00:00.000Z",
+  "channels": [
+    {
+      "id": "CCTV1.cn",
+      "name": "CCTV-1",
+      "logo": "https://example.com/logo.png",
+      "group": "央视",
+      "sources": [
+        {
+          "url": "https://example.com/live.m3u8",
+          "quality": "1080p",
+          "videoCodec": null,
+          "userAgent": null,
+          "referrer": null,
+          "geoBlocked": false,
+          "alwaysOn": true,
+          "status": "unknown",
+          "checkedAt": null
+        }
+      ]
+    }
+  ]
+}
+```
+
+响应头包含：
+
+- `Content-Type: application/json; charset=utf-8`
+- `Cache-Control: public, max-age=300`
+- `ETag`
+
+客户端可发送 `If-None-Match`；内容未变化时返回 `304`，无响应体。
+
+## `GET /iptv/v1/status.json`
+
+同步状态，不是 App 播放依赖。`Cache-Control: no-store`。
+
+```json
+{
+  "state": "ready",
+  "upstream": "https://iptv-org.github.io/iptv/countries/cn.m3u",
+  "lastAttemptAt": "2026-08-13T01:00:00.000Z",
+  "lastSuccessAt": "2026-08-13T01:00:01.000Z",
+  "channelCount": 149,
+  "sourceCount": 149,
+  "error": null
+}
+```
+
+`state`：`starting | syncing | ready | error`。同步失败时，若已有旧目录，频道接口继续返回旧目录。
+
+## 探针
+
+```text
+GET /healthz  进程能够响应即 200 {"status":"ok"}
+GET /readyz   channels.json 已存在即 200；否则 503
+```
+
+`readyz` 在同步失败但仍有旧数据时保持 200，因为服务仍可向 App 提供可用目录。
+
+## 通用状态码
+
+| 状态码 | 含义 |
+|---|---|
+| `200` | 成功 |
+| `304` | ETag 未变化 |
+| `404` | 路径不存在 |
+| `405` | 只允许 GET/HEAD |
+| `500` | 本地数据读取异常 |
+| `503` | 首份频道目录尚未生成 |

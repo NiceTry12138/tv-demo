@@ -25,6 +25,7 @@ test("HTTP 服务返回健康状态、频道数据和未找到", async () => {
     const baseUrl = `http://127.0.0.1:${port}`;
 
     assert.equal((await fetch(`${baseUrl}/healthz`)).status, 200);
+    assert.equal((await fetch(`${baseUrl}/readyz`)).status, 503);
     assert.equal((await fetch(`${baseUrl}/iptv/v1/channels.json`)).status, 503);
 
     await publishCatalog(directory, {
@@ -34,6 +35,12 @@ test("HTTP 服务返回健康状态、频道数据和未找到", async () => {
     const response = await fetch(`${baseUrl}/iptv/v1/channels.json`);
     assert.equal(response.status, 200);
     assert.equal((await response.json() as { version: string }).version, "v1");
+    assert.equal((await fetch(`${baseUrl}/readyz`)).status, 200);
+    const etag = response.headers.get("etag");
+    assert.ok(etag);
+    assert.equal((await fetch(`${baseUrl}/iptv/v1/channels.json`, {
+      headers: { "If-None-Match": etag }
+    })).status, 304);
     assert.equal((await fetch(`${baseUrl}/missing`)).status, 404);
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));

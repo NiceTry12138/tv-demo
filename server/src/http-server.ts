@@ -1,9 +1,9 @@
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
-import { createServer, type Server, type ServerResponse } from "node:http";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { join } from "node:path";
 import type { Config } from "./config.js";
-import { CHANNELS_FILE, STATUS_FILE } from "./storage.js";
+import { CHANNELS_FILE, isCatalogReady, STATUS_FILE } from "./storage.js";
 
 export function createHttpServer(config: Config): Server {
   return createServer(async (request, response) => {
@@ -17,27 +17,52 @@ export function createHttpServer(config: Config): Server {
       sendJson(response, 200, { status: "ok" }, request.method === "HEAD");
       return;
     }
+    if (pathname === "/readyz") {
+      const ready = await isCatalogReady(config.dataDir);
+      sendJson(
+        response,
+        ready ? 200 : 503,
+        { status: ready ? "ready" : "not_ready" },
+        request.method === "HEAD"
+      );
+      return;
+    }
     if (pathname === "/iptv/v1/channels.json") {
-      await sendFile(response, join(config.dataDir, CHANNELS_FILE), request.method === "HEAD");
+      await sendFile(request, response, join(config.dataDir, CHANNELS_FILE), request.method === "HEAD", 300);
       return;
     }
     if (pathname === "/iptv/v1/status.json") {
-      await sendFile(response, join(config.dataDir, STATUS_FILE), request.method === "HEAD");
+      await sendFile(request, response, join(config.dataDir, STATUS_FILE), request.method === "HEAD", 0);
       return;
     }
     sendJson(response, 404, { error: "Not Found" }, request.method === "HEAD");
   });
 }
 
-async function sendFile(response: ServerResponse, path: string, headOnly: boolean): Promise<void> {
+async function sendFile(
+  request: IncomingMessage,
+  response: ServerResponse,
+  path: string,
+  headOnly: boolean,
+  maxAgeSeconds: number
+): Promise<void> {
   try {
     const file = await stat(path);
     const etag = `W/\"${file.size}-${Math.trunc(file.mtimeMs)}\"`;
-    response.writeHead(200, {
+    const headers = {
       "Content-Type": "application/json; charset=utf-8",
-      "Content-Length": file.size,
-      "Cache-Control": "public, max-age=300",
+      "Cache-Control": maxAgeSeconds > 0 ? `public, max-age=${maxAgeSeconds}` : "no-store",
+      "X-Content-Type-Options": "nosniff",
       ETag: etag
+    };
+    if (request.headers["if-none-match"] === etag) {
+      response.writeHead(304, headers);
+      response.end();
+      return;
+    }
+    response.writeHead(200, {
+      ...headers,
+      "Content-Length": file.size,
     });
     if (headOnly) response.end();
     else createReadStream(path).pipe(response);
@@ -55,7 +80,8 @@ function sendJson(response: ServerResponse, status: number, value: unknown, head
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
     "Content-Length": Buffer.byteLength(body),
-    "Cache-Control": "no-store"
+    "Cache-Control": "no-store",
+    "X-Content-Type-Options": "nosniff"
   });
   response.end(headOnly ? undefined : body);
 }

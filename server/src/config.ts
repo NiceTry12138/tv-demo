@@ -17,6 +17,14 @@ function positiveNumber(name: string, value: string | undefined, fallback: numbe
   return parsed;
 }
 
+function portNumber(value: string | undefined): number {
+  const port = positiveNumber("PORT", value, 8080);
+  if (!Number.isInteger(port) || port > 65_535) {
+    throw new Error("PORT 必须是 1 到 65535 的整数");
+  }
+  return port;
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const upstreamUrl = env.UPSTREAM_M3U_URL ??
     "https://iptv-org.github.io/iptv/countries/cn.m3u";
@@ -27,7 +35,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   return {
     upstreamUrl,
     host: env.HOST ?? "0.0.0.0",
-    port: positiveNumber("PORT", env.PORT, 8080),
+    port: portNumber(env.PORT),
     syncIntervalMs: positiveNumber("SYNC_INTERVAL_HOURS", env.SYNC_INTERVAL_HOURS, 6) * 3_600_000,
     fetchTimeoutMs: positiveNumber("FETCH_TIMEOUT_MS", env.FETCH_TIMEOUT_MS, 30_000),
     dataDir: resolve(env.DATA_DIR ?? "./data")

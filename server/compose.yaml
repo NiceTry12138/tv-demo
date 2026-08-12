@@ -2,6 +2,10 @@ services:
   tv-server:
     build: .
     restart: unless-stopped
+    init: true
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
     environment:
       UPSTREAM_M3U_URL: https://iptv-org.github.io/iptv/countries/cn.m3u
       SYNC_INTERVAL_HOURS: 6
@@ -9,4 +13,13 @@ services:
     ports:
       - "127.0.0.1:8080:8080"
     volumes:
-      - ./data:/app/data
+      - home-tv-data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/readyz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  home-tv-data:
