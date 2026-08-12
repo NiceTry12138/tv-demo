@@ -1,0 +1,10 @@
+<resources>
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
+    <color name="panel_background">#E612171A</color>
+    <color name="panel_muted">#AFC0C8CC</color>
+    <color name="channel_normal">#182126</color>
+    <color name="channel_selected">#0C7C86</color>
+    <color name="channel_focused">#F5A623</color>
+    <color name="error">#FF6B5E</color>
+</resources>

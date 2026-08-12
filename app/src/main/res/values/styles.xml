@@ -1,0 +1,10 @@
+<resources>
+    <style name="Theme.HomeTV" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:colorAccent">@color/channel_focused</item>
+        <item name="android:navigationBarColor">@color/black</item>
+    </style>
+</resources>

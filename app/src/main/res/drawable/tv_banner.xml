@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape>
+            <solid android:color="@color/channel_selected" />
+        </shape>
+    </item>
+    <item
+        android:left="120dp"
+        android:top="50dp"
+        android:right="120dp"
+        android:bottom="50dp"
+        android:drawable="@drawable/ic_tv" />
+</layer-list>

@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black"
+    android:keepScreenOn="true">
+
+    <androidx.media3.ui.PlayerView
+        android:id="@+id/player_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:resize_mode="fit"
+        app:show_buffering="when_playing"
+        app:use_controller="false" />
+
+    <TextView
+        android:id="@+id/status_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="start|bottom"
+        android:layout_margin="24dp"
+        android:background="@drawable/status_background"
+        android:maxWidth="720dp"
+        android:textColor="@color/white"
+        android:textSize="18sp" />
+
+    <LinearLayout
+        android:id="@+id/channel_panel"
+        android:layout_width="420dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="end"
+        android:background="@color/panel_background"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            android:id="@+id/channel_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:paddingBottom="8dp"
+            android:textColor="@color/white"
+            android:textSize="25sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/channel_meta"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="14dp"
+            android:textColor="@color/panel_muted"
+            android:textSize="15sp" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/channel_list"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:focusable="true"
+            android:paddingBottom="24dp" />
+    </LinearLayout>
+</FrameLayout>
