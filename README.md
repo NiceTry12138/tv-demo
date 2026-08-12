@@ -1,47 +1,57 @@
-# 家庭电视
+# TV Demo
 
-面向 Android 6.0（API 23）电视盒子的个人 IPTV 播放器。
+个人使用的 IPTV 系统，仓库分为两个独立部分：
 
-当前版本目标：
-
-- 从自有服务器读取结构化频道 JSON
-- 远程请求失败时使用本地缓存或 APK 内置示例
-- 使用 Media3 ExoPlayer 播放直播流
-- 支持遥控器换台、频道面板和触摸选择
-- 同一频道播放失败时自动切换备用源
-
-设计文档：
-
-- [模块设计](docs/01-模块设计.md)
-- [代码实现说明](docs/02-代码实现说明.md)
-
-## 本地构建
-
-Android Studio 中将 Gradle JDK 设置为 Embedded JDK，然后执行：
-
-```powershell
-.\gradlew.bat testDebugUnitTest assembleDebug
+```text
+tv-demo/
+├─ android-tv/   Android TV 客户端
+└─ server/       频道同步与配置服务
 ```
 
-如果系统全局 Java 不能升级，可仅为当前 PowerShell 指定 Android Studio 自带 JDK：
+## Android TV App
+
+`android-tv/` 使用 Kotlin、Android View、Media3 ExoPlayer。支持 Android 6.0
+（API 23）、频道缓存、遥控器换台和同频道备用源自动切换。
+
+构建：
 
 ```powershell
+cd android-tv
 $env:JAVA_HOME="$env:ProgramFiles\Android\Android Studio\jbr"
 $env:ANDROID_HOME="$env:LOCALAPPDATA\Android\Sdk"
 .\gradlew.bat testDebugUnitTest assembleDebug lintDebug
 ```
 
-默认使用 APK 内置的 `sample_channels.json`。接入自有服务器时，在项目根目录的
-`local.properties` 添加：
+详细说明见 [Android TV README](android-tv/README.md)。
+
+## Server
+
+`server/` 使用 Node.js 22 和 TypeScript。它定期下载 iptv-org CN M3U，解析、合并频道，
+保留上一份成功数据，并向 App 提供 JSON。它不转发视频流。
+
+开发运行：
+
+```powershell
+cd server
+npm install
+npm test
+npm run dev
+```
+
+接口：
+
+- `GET /iptv/v1/channels.json`
+- `GET /iptv/v1/status.json`
+- `GET /healthz`
+
+详细配置和部署见 [Server README](server/README.md)。
+
+## App 连接服务器
+
+在 `android-tv/local.properties` 写入：
 
 ```properties
 CHANNELS_URL=https://your-domain.example/iptv/v1/channels.json
 ```
 
-`local.properties` 不提交到 Git。
-
-## 模拟器说明
-
-真实目标是 Android 6.0（API 23）ARM 电视盒子；APK 的 `minSdk` 为 23。当前新版
-Android Emulator 已不支持启动 API 23 `armeabi-v7a` 镜像。本机运行调试应另装可用的
-Android TV x86/x86_64 镜像；最终仍需在真实 ARM 盒子验证解码、遥控器和网络直播源。
+该文件已忽略，不会提交私人服务器地址。

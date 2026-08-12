@@ -1,0 +1,12 @@
+services:
+  tv-server:
+    build: .
+    restart: unless-stopped
+    environment:
+      UPSTREAM_M3U_URL: https://iptv-org.github.io/iptv/countries/cn.m3u
+      SYNC_INTERVAL_HOURS: 6
+      FETCH_TIMEOUT_MS: 30000
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./data:/app/data

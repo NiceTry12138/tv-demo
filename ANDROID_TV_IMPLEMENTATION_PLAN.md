@@ -129,6 +129,7 @@ Apple Silicon 对旧版 x86 Android 6 模拟器支持可能有限，旧系统兼
 Windows：
 
 ```powershell
+cd android-tv
 .\gradlew.bat assembleDebug
 adb install -r app\build\outputs\apk\debug\app-debug.apk
 ```
@@ -136,6 +137,7 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 macOS：
 
 ```bash
+cd android-tv
 ./gradlew assembleDebug
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```

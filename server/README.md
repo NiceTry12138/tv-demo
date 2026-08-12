@@ -1,0 +1,90 @@
+# 频道服务器
+
+Node.js 22 + TypeScript 服务。定时同步 iptv-org CN M3U，将其转换成 Android TV App
+使用的 `channels.json`。服务器只发布配置，不代理直播视频。
+
+## 模块与原理
+
+```text
+iptv-org cn.m3u
+       |
+       v
+CatalogSynchronizer -- 下载、超时、互斥
+       |
+       v
+M3U parser -- 元数据、请求头、URL
+       |
+       v
+buildCatalog -- 同频道多源合并、去重
+       |
+       v
+storage -- 临时文件发布、保留上一版本
+       |
+       v
+HTTP server -- channels/status/health
+```
+
+- `src/m3u.ts`：解析 `#EXTINF`、`#EXTVLCOPT`、`#EXTHTTP`；按 `tvg-id` 或频道名合并。
+- `src/synchronizer.ts`：下载和发布事务边界。任何失败都不会覆盖现有 `channels.json`。
+- `src/storage.ts`：写临时文件后重命名，更新前复制 `channels.previous.json`。
+- `src/http-server.ts`：只读 JSON 接口，频道尚未生成时返回 HTTP 503。
+- `src/index.ts`：启动 HTTP 服务、立即同步一次，之后按间隔同步；同步任务不会重叠。
+
+第一版不探测每个视频源是否可播，输出 `status: "unknown"`。原因：服务端出口检测结果
+不能代表家庭网络或电视盒子一定可访问。App 仍会按源逐个尝试。后续可增加有限并发健康检测。
+
+## 本地运行
+
+```powershell
+npm install
+npm test
+npm run typecheck
+npm run dev
+```
+
+需要覆盖默认配置时，将 `.env.example` 复制为 `.env` 后修改。Node 22 会在启动时读取它，
+`.env` 已被 Git 忽略。
+
+只执行一次同步：
+
+```powershell
+npm run sync
+```
+
+默认监听 `0.0.0.0:8080`，数据写入 `./data`。
+
+## 环境变量
+
+| 变量 | 默认值 | 作用 |
+|---|---|---|
+| `UPSTREAM_M3U_URL` | iptv-org CN 地址 | 上游 M3U |
+| `HOST` | `0.0.0.0` | 监听地址 |
+| `PORT` | `8080` | 监听端口 |
+| `SYNC_INTERVAL_HOURS` | `6` | 同步间隔 |
+| `FETCH_TIMEOUT_MS` | `30000` | 上游下载超时 |
+| `DATA_DIR` | `./data` | 发布目录 |
+
+## HTTP 接口
+
+```text
+GET /iptv/v1/channels.json  App 使用的频道数据
+GET /iptv/v1/status.json    同步状态、频道数、源数量
+GET /healthz                进程存活检查
+```
+
+## Docker 部署
+
+```bash
+docker compose up -d --build
+curl http://127.0.0.1:8080/healthz
+curl http://127.0.0.1:8080/iptv/v1/status.json
+```
+
+Compose 只绑定服务器本机 `127.0.0.1:8080`。用 Caddy 或 Nginx 反向代理并提供 HTTPS，
+再把 App 的 `CHANNELS_URL` 指向：
+
+```text
+https://your-domain.example/iptv/v1/channels.json
+```
+
+`server/data` 必须使用持久化磁盘，否则容器重建会丢失上次成功数据。
