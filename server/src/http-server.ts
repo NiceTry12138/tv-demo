@@ -9,7 +9,7 @@ export function createHttpServer(config: Config): Server {
   return createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", "http://localhost");
     const pathname = url.pathname;
-    if (request.method !== "POST") {
+    if (request.method !== "GET") {
       sendJson(response, 405, { error: "Method Not Allowed" });
       return;
     }

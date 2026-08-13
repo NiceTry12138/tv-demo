@@ -28,7 +28,7 @@ $env:ANDROID_HOME="$env:LOCALAPPDATA\Android\Sdk"
 
 `server/` 使用 Node.js 22 和 TypeScript。它定期更新 iptv-org Git 仓库，读取全量和 CN M3U，解析、合并频道，
 保留上一份成功数据，并向 App 提供 JSON。它不转发视频流。
-对外 API 只接受 POST；POST 本身不提供身份认证。
+当前对外 API 使用 GET，便于本地调试；GET 本身不提供身份认证。
 
 开发运行：
 
@@ -41,11 +41,11 @@ npm run dev
 
 接口：
 
-- `POST /iptv/v1/channels.json`
-- `POST /iptv/v1/channels.json?country=CN`
-- `POST /iptv/v1/status.json`
-- `POST /healthz`
-- `POST /readyz`
+- `GET /iptv/v1/channels.json`
+- `GET /iptv/v1/channels.json?country=CN`
+- `GET /iptv/v1/status.json`
+- `GET /healthz`
+- `GET /readyz`
 
 详细配置见 [Server README](server/README.md)，Ubuntu 22.04 部署见
 [部署文档](server/docs/UBUNTU_DEPLOY.md)。

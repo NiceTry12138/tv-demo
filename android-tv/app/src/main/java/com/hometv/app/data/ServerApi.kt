@@ -5,7 +5,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
 
 class ServerApi(
@@ -17,7 +16,7 @@ class ServerApi(
 ) {
     suspend fun check(endpoint: ServerEndpoint): ServerCheckResponse = withContext(Dispatchers.IO) {
         val request = Request.Builder().url(endpoint.checkUrl)
-            .post(ByteArray(0).toRequestBody())
+            .get()
             .build()
         client.newCall(request).execute().use { response ->
             check(response.isSuccessful) { "服务器返回 HTTP ${response.code}" }

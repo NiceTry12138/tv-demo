@@ -84,10 +84,10 @@ sudo systemctl status home-tv-server --no-pager
 检查本机接口：
 
 ```bash
-curl -i -X POST http://127.0.0.1:8080/healthz
-curl -i -X POST http://127.0.0.1:8080/readyz
-curl -s -X POST http://127.0.0.1:8080/iptv/v1/status.json | python3 -m json.tool
-curl -s -X POST 'http://127.0.0.1:8080/iptv/v1/status.json?country=CN' | python3 -m json.tool
+curl -i http://127.0.0.1:8080/healthz
+curl -i http://127.0.0.1:8080/readyz
+curl -s http://127.0.0.1:8080/iptv/v1/status.json | python3 -m json.tool
+curl -s 'http://127.0.0.1:8080/iptv/v1/status.json?country=CN' | python3 -m json.tool
 ```
 
 首次同步会先浅克隆 iptv-org Git 仓库，耗时取决于服务器到 GitHub 的网络；之后每次同步执行
@@ -150,9 +150,9 @@ sudo certbot renew --dry-run
 公网验证：
 
 ```bash
-curl -i -X POST https://你的真实域名/iptv/v1/status.json
-curl -i -X POST https://你的真实域名/iptv/v1/channels.json
-curl -i -X POST 'https://你的真实域名/iptv/v1/channels.json?country=CN'
+curl -i https://你的真实域名/iptv/v1/status.json
+curl -i https://你的真实域名/iptv/v1/channels.json
+curl -i 'https://你的真实域名/iptv/v1/channels.json?country=CN'
 ```
 
 App 配置：
@@ -171,7 +171,7 @@ sudo npm ci
 sudo npm test
 sudo npm run build
 sudo systemctl restart home-tv-server
-curl -i -X POST http://127.0.0.1:8080/readyz
+curl -i http://127.0.0.1:8080/readyz
 ```
 
 若新版本失败，可切回上一 Git 提交并重新构建。频道运行数据位于 `/var/lib`，不会被覆盖。
@@ -184,7 +184,7 @@ curl -i -X POST http://127.0.0.1:8080/readyz
 cd /opt/tv-demo/server
 sudo docker compose up -d --build
 sudo docker compose ps
-curl -i -X POST http://127.0.0.1:8080/readyz
+curl -i http://127.0.0.1:8080/readyz
 ```
 
 仍需按第 5 节配置 Nginx/HTTPS。不要同时启动 systemd 和 Compose，否则都会占用 8080。
