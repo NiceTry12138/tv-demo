@@ -83,3 +83,6 @@ Release Tag 同样使用 `build-<run-id>-<attempt>-<commit-sha>`，每次运行�
 如需把自有服务器地址编入 APK，在仓库 `Settings → Secrets and variables → Actions` 新增
 `CHANNELS_URL` Secret。未配置时 App 使用内置示例。Secret 不会写入 Git，但 URL 会进入
 APK，可以被提取；不要在 URL 中放密码或访问令牌。
+
+APK 也支持在 App 的“服务器设置”中输入 IPv4 和端口。运行时保存的设置优先于构建时
+`CHANNELS_URL`，适合局域网和调试环境。

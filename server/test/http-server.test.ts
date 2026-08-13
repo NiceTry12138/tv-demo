@@ -25,6 +25,14 @@ test("HTTP 服务返回健康状态、频道数据和未找到", async () => {
     const baseUrl = `http://127.0.0.1:${port}`;
 
     assert.equal((await fetch(`${baseUrl}/healthz`)).status, 200);
+    const checkBefore = await fetch(`${baseUrl}/check`);
+    assert.equal(checkBefore.status, 200);
+    assert.deepEqual(await checkBefore.json(), {
+      service: "home-tv-server",
+      apiVersion: 1,
+      status: "ok",
+      catalogReady: false
+    });
     assert.equal((await fetch(`${baseUrl}/readyz`)).status, 503);
     assert.equal((await fetch(`${baseUrl}/iptv/v1/channels.json`)).status, 503);
 
@@ -36,6 +44,9 @@ test("HTTP 服务返回健康状态、频道数据和未找到", async () => {
     assert.equal(response.status, 200);
     assert.equal((await response.json() as { version: string }).version, "v1");
     assert.equal((await fetch(`${baseUrl}/readyz`)).status, 200);
+    assert.equal((await fetch(`${baseUrl}/check`).then((result) => result.json()) as {
+      catalogReady: boolean
+    }).catalogReady, true);
     const etag = response.headers.get("etag");
     assert.ok(etag);
     assert.equal((await fetch(`${baseUrl}/iptv/v1/channels.json`, {

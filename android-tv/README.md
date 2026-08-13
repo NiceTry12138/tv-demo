@@ -10,6 +10,7 @@
 - 遥控器换台、频道面板和手机触摸选择
 - 同频道播放失败时自动切换备用源
 - 保存并恢复最后播放频道
+- 在 App 内设置服务器 IPv4 和端口，连接验证成功后持久保存
 
 设计文档：
 
@@ -34,6 +35,21 @@ CHANNELS_URL=https://your-domain.example/iptv/v1/channels.json
 ```
 
 `local.properties` 不提交到 Git。
+
+## App 内服务器设置
+
+打开右侧频道面板，选择“服务器设置”；也可按遥控器 `MENU` 键。输入：
+
+```text
+IP：192.168.1.100
+端口：8080
+```
+
+点击“确定”后，App 请求 `http://IP:端口/check`。只有服务返回兼容的 HomeTV 标识才保存，
+然后立即请求 `http://IP:端口/iptv/v1/channels.json`。连接失败时保留原设置；“取消”不修改设置。
+
+设置保存于 Android App 私有 `SharedPreferences` XML。重启和升级 App 后仍保留；清除 App 数据
+或卸载 App 会删除。App 内保存的地址优先级高于构建时 `CHANNELS_URL`。
 
 ## 模拟器说明
 

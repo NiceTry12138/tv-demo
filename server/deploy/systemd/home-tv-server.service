@@ -8,10 +8,8 @@ Type=simple
 User=home-tv
 Group=home-tv
 WorkingDirectory=/opt/tv-demo/server
-EnvironmentFile=-/etc/home-tv-server.env
-Environment=HOST=127.0.0.1
-Environment=PORT=8080
 Environment=DATA_DIR=/var/lib/home-tv-server
+EnvironmentFile=/etc/home-tv-server.env
 ExecStart=/usr/bin/node dist/index.js
 Restart=on-failure
 RestartSec=5s

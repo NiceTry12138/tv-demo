@@ -3,11 +3,13 @@ package com.hometv.app.ui
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.content.DialogInterface
 import android.view.KeyEvent
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowManager
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -16,6 +18,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.hometv.app.data.CatalogOrigin
 import com.hometv.app.data.Channel
 import com.hometv.app.databinding.ActivityMainBinding
+import com.hometv.app.databinding.DialogServerSettingsBinding
 import com.hometv.app.player.PlaybackController
 import com.hometv.app.player.TvPlayer
 import com.hometv.app.viewmodel.TvUiState
@@ -30,7 +33,7 @@ class MainActivity : AppCompatActivity(), PlaybackController.Listener {
     private lateinit var channelAdapter: ChannelAdapter
     private val handler = Handler(Looper.getMainLooper())
 
-    private var renderedChannelId: String? = null
+    private var renderedPlaybackKey: Pair<Long, String>? = null
     private var channelPanelVisible = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,6 +55,7 @@ class MainActivity : AppCompatActivity(), PlaybackController.Listener {
         }
         binding.channelList.layoutManager = LinearLayoutManager(this)
         binding.channelList.adapter = channelAdapter
+        binding.serverSettingsButton.setOnClickListener { showServerSettings() }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -81,7 +85,7 @@ class MainActivity : AppCompatActivity(), PlaybackController.Listener {
         return when (keyCode) {
             KeyEvent.KEYCODE_DPAD_UP,
             KeyEvent.KEYCODE_CHANNEL_UP -> {
-                if (channelPanelVisible && binding.channelList.hasFocus()) {
+                if (channelPanelVisible && binding.channelPanel.hasFocus()) {
                     super.onKeyDown(keyCode, event)
                 } else {
                     viewModel.selectPreviousChannel()
@@ -92,7 +96,7 @@ class MainActivity : AppCompatActivity(), PlaybackController.Listener {
 
             KeyEvent.KEYCODE_DPAD_DOWN,
             KeyEvent.KEYCODE_CHANNEL_DOWN -> {
-                if (channelPanelVisible && binding.channelList.hasFocus()) {
+                if (channelPanelVisible && binding.channelPanel.hasFocus()) {
                     super.onKeyDown(keyCode, event)
                 } else {
                     viewModel.selectNextChannel()
@@ -113,7 +117,16 @@ class MainActivity : AppCompatActivity(), PlaybackController.Listener {
 
             KeyEvent.KEYCODE_DPAD_CENTER,
             KeyEvent.KEYCODE_ENTER -> {
-                if (channelPanelVisible) hideChannelPanel() else showChannelPanel(requestFocus = true)
+                if (channelPanelVisible && binding.channelPanel.hasFocus()) {
+                    super.onKeyDown(keyCode, event)
+                } else {
+                    if (channelPanelVisible) hideChannelPanel() else showChannelPanel(requestFocus = true)
+                    true
+                }
+            }
+
+            KeyEvent.KEYCODE_MENU -> {
+                showServerSettings()
                 true
             }
 
@@ -155,8 +168,9 @@ class MainActivity : AppCompatActivity(), PlaybackController.Listener {
         binding.statusText.visibility = View.VISIBLE
 
         state.selectedChannel?.let { channel ->
-            if (renderedChannelId != channel.id) {
-                renderedChannelId = channel.id
+            val playbackKey = state.catalogRevision to channel.id
+            if (renderedPlaybackKey != playbackKey) {
+                renderedPlaybackKey = playbackKey
                 playbackController.play(channel)
             }
         }
@@ -189,6 +203,45 @@ class MainActivity : AppCompatActivity(), PlaybackController.Listener {
                 binding.channelList.findViewHolderForAdapterPosition(index)?.itemView?.requestFocus()
             }
         }
+    }
+
+    private fun showServerSettings() {
+        val dialogBinding = DialogServerSettingsBinding.inflate(layoutInflater)
+        viewModel.savedServerEndpoint()?.let { endpoint ->
+            dialogBinding.serverIpInput.setText(endpoint.ip)
+            dialogBinding.serverPortInput.setText(endpoint.port.toString())
+        } ?: dialogBinding.serverPortInput.setText(DEFAULT_SERVER_PORT.toString())
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogBinding.root)
+            .setNegativeButton("取消", null)
+            .setPositiveButton("确定", null)
+            .create()
+
+        dialog.setOnShowListener {
+            val confirm = dialog.getButton(DialogInterface.BUTTON_POSITIVE)
+            confirm.setOnClickListener {
+                confirm.isEnabled = false
+                dialogBinding.serverSettingsStatus.setTextColor(getColor(com.hometv.app.R.color.panel_muted))
+                dialogBinding.serverSettingsStatus.text = "正在连接服务器..."
+                viewModel.checkAndSaveServer(
+                    dialogBinding.serverIpInput.text.toString(),
+                    dialogBinding.serverPortInput.text.toString()
+                ) { result ->
+                    if (isFinishing || isDestroyed || !dialog.isShowing) return@checkAndSaveServer
+                    result.onSuccess {
+                        dialog.dismiss()
+                    }.onFailure { error ->
+                        confirm.isEnabled = true
+                        dialogBinding.serverSettingsStatus.setTextColor(getColor(com.hometv.app.R.color.error))
+                        dialogBinding.serverSettingsStatus.text = error.message ?: "服务器连接失败"
+                    }
+                }
+            }
+            dialogBinding.serverIpInput.requestFocus()
+        }
+        dialog.setOnDismissListener { binding.playerView.requestFocus() }
+        dialog.show()
     }
 
     private fun hideChannelPanel() {
@@ -226,5 +279,6 @@ class MainActivity : AppCompatActivity(), PlaybackController.Listener {
     private companion object {
         const val PANEL_HIDE_DELAY_MS = 8_000L
         const val STATUS_HIDE_DELAY_MS = 5_000L
+        const val DEFAULT_SERVER_PORT = 8080
     }
 }

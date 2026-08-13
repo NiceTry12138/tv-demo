@@ -17,6 +17,16 @@ export function createHttpServer(config: Config): Server {
       sendJson(response, 200, { status: "ok" }, request.method === "HEAD");
       return;
     }
+    if (pathname === "/check") {
+      const ready = await isCatalogReady(config.dataDir);
+      sendJson(response, 200, {
+        service: "home-tv-server",
+        apiVersion: 1,
+        status: "ok",
+        catalogReady: ready
+      }, request.method === "HEAD");
+      return;
+    }
     if (pathname === "/readyz") {
       const ready = await isCatalogReady(config.dataDir);
       sendJson(

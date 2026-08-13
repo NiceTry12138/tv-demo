@@ -2,6 +2,7 @@ package com.hometv.app.data
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ChannelJsonTest {
@@ -32,5 +33,16 @@ class ChannelJsonTest {
         assertEquals(1, catalog.channels.size)
         assertEquals("其他", catalog.channels.first().group)
         assertFalse(catalog.channels.first().sources.first().geoBlocked)
+    }
+
+    @Test
+    fun `解析服务器检查响应`() {
+        val response = ChannelJson.format.decodeFromString<ServerCheckResponse>(
+            """{"service":"home-tv-server","apiVersion":1,"status":"ok","catalogReady":true}"""
+        )
+
+        assertEquals("home-tv-server", response.service)
+        assertEquals(1, response.apiVersion)
+        assertTrue(response.catalogReady)
     }
 }

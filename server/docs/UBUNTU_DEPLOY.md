@@ -97,6 +97,31 @@ sudo journalctl -u home-tv-server -f
 
 数据保存在 `/var/lib/home-tv-server`，代码更新不会删除它。
 
+### 局域网 IP + 端口直连（调试）
+
+生产默认只监听 `127.0.0.1:8080`，Android TV 不能直接访问。若需要在同一局域网用
+`服务器IP:8080` 调试，修改 `/etc/home-tv-server.env`：
+
+```properties
+HOST=0.0.0.0
+PORT=8080
+```
+
+然后重启，并只允许家庭局域网访问；下面示例按 `192.168.1.0/24`：
+
+```bash
+sudo systemctl restart home-tv-server
+sudo ufw allow from 192.168.1.0/24 to any port 8080 proto tcp
+```
+
+App 中填写 Ubuntu 服务器的局域网 IPv4 和 `8080`。公网环境不要直接开放 8080，应继续使用
+Nginx/HTTPS。调试结束执行下列命令，并把 `HOST` 改回 `127.0.0.1`：
+
+```bash
+sudo ufw delete allow from 192.168.1.0/24 to any port 8080 proto tcp
+sudo systemctl restart home-tv-server
+```
+
 ## 5. 配置 Nginx 和 HTTPS
 
 先替换配置中的 `tv.example.com`：

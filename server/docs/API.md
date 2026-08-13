@@ -3,6 +3,20 @@
 服务默认只监听 `127.0.0.1:8080`（生产 systemd 配置），公网由 Nginx 提供 HTTPS。
 所有业务接口只读，支持 `GET` 和 `HEAD`。
 
+## `GET /check`
+
+供 Android TV 设置界面验证输入的 IP 和端口确实指向本服务。只验证服务身份；即使首份频道
+目录尚未同步完成也返回 `200`，由 `catalogReady` 表示数据状态。
+
+```json
+{
+  "service": "home-tv-server",
+  "apiVersion": 1,
+  "status": "ok",
+  "catalogReady": true
+}
+```
+
 ## `GET /iptv/v1/channels.json`
 
 Android TV App 使用的频道目录。首次同步未完成时返回 `503`。成功响应：
@@ -64,6 +78,7 @@ Android TV App 使用的频道目录。首次同步未完成时返回 `503`。�
 
 ```text
 GET /healthz  进程能够响应即 200 {"status":"ok"}
+GET /check    App 服务器设置验证，进程正常即 200
 GET /readyz   channels.json 已存在即 200；否则 503
 ```
 

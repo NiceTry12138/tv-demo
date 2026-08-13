@@ -34,6 +34,17 @@
         android:orientation="vertical"
         android:padding="20dp">
 
+        <Button
+            android:id="@+id/server_settings_button"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/channel_item_background"
+            android:focusable="true"
+            android:text="服务器设置"
+            android:textColor="@color/white"
+            android:textSize="16sp" />
+
         <TextView
             android:id="@+id/channel_title"
             android:layout_width="match_parent"

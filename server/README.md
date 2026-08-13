@@ -69,6 +69,7 @@ npm run sync
 ```text
 GET /iptv/v1/channels.json  App 使用的频道数据
 GET /iptv/v1/status.json    同步状态、频道数、源数量
+GET /check                  App 设置界面的服务器身份验证
 GET /healthz                进程存活检查
 GET /readyz                 是否已有可提供的频道目录
 ```

@@ -9,6 +9,10 @@ import com.hometv.app.data.Channel
 import com.hometv.app.data.ChannelApi
 import com.hometv.app.data.ChannelCache
 import com.hometv.app.data.ChannelRepository
+import com.hometv.app.data.ServerApi
+import com.hometv.app.data.ServerCheckResponse
+import com.hometv.app.data.ServerConfigStore
+import com.hometv.app.data.ServerEndpoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -16,10 +20,10 @@ import kotlinx.coroutines.launch
 
 class TvViewModel(application: Application) : AndroidViewModel(application) {
     private val preferences = application.getSharedPreferences(PREFERENCES_NAME, 0)
-    private val repository = ChannelRepository(
-        api = ChannelApi(BuildConfig.CHANNELS_URL),
-        cache = ChannelCache(application)
-    )
+    private val channelCache = ChannelCache(application)
+    private val serverConfigStore = ServerConfigStore(application)
+    private val serverApi = ServerApi()
+    private var channelsUrl = serverConfigStore.load()?.channelsUrl ?: BuildConfig.CHANNELS_URL
 
     private val _uiState = MutableStateFlow(TvUiState())
     val uiState = _uiState.asStateFlow()
@@ -58,8 +62,39 @@ class TvViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(playbackMessage = "播放失败", errorMessage = message) }
     }
 
+    fun savedServerEndpoint(): ServerEndpoint? = serverConfigStore.load()
+
+    fun checkAndSaveServer(
+        ip: String,
+        port: String,
+        onComplete: (Result<ServerCheckResponse>) -> Unit
+    ) {
+        val endpoint = runCatching { ServerEndpoint.parse(ip, port) }
+            .getOrElse { error ->
+                onComplete(Result.failure(error))
+                return
+            }
+
+        viewModelScope.launch {
+            val result = runCatching {
+                val check = serverApi.check(endpoint)
+                serverConfigStore.save(endpoint)
+                channelsUrl = endpoint.channelsUrl
+                check
+            }
+            result.onSuccess { check ->
+                refreshFromServer()
+                val readiness = if (check.catalogReady) "服务器设置已保存" else "服务器已连接，频道正在准备"
+                _uiState.update { it.copy(playbackMessage = readiness, errorMessage = null) }
+            }
+            onComplete(result)
+        }
+    }
+
     private fun loadChannels() {
         viewModelScope.launch {
+            val requestUrl = channelsUrl
+            val repository = createRepository()
             runCatching { repository.loadInitialCatalog() }
                 .onSuccess { loaded -> applyCatalog(loaded.catalog.channels, loaded.origin) }
                 .onFailure { error ->
@@ -73,9 +108,11 @@ class TvViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
             repository.refresh()
-                .onSuccess { loaded -> applyCatalog(loaded.catalog.channels, loaded.origin) }
+                .onSuccess { loaded ->
+                    if (requestUrl == channelsUrl) applyCatalog(loaded.catalog.channels, loaded.origin)
+                }
                 .onFailure { error ->
-                    if (BuildConfig.CHANNELS_URL.isNotBlank()) {
+                    if (requestUrl == channelsUrl && channelsUrl.isNotBlank()) {
                         _uiState.update { state ->
                             state.copy(errorMessage = "远程更新失败，继续使用本地频道：${error.message}")
                         }
@@ -83,6 +120,23 @@ class TvViewModel(application: Application) : AndroidViewModel(application) {
                 }
         }
     }
+
+    private fun refreshFromServer() {
+        viewModelScope.launch {
+            createRepository().refresh()
+                .onSuccess { loaded -> applyCatalog(loaded.catalog.channels, loaded.origin) }
+                .onFailure { error ->
+                    _uiState.update { state ->
+                        state.copy(errorMessage = "服务器已保存，但频道更新失败：${error.message}")
+                    }
+                }
+        }
+    }
+
+    private fun createRepository(): ChannelRepository = ChannelRepository(
+        api = ChannelApi(channelsUrl),
+        cache = channelCache
+    )
 
     private fun applyCatalog(channels: List<Channel>, origin: CatalogOrigin) {
         val currentId = _uiState.value.selectedChannel?.id
@@ -93,6 +147,7 @@ class TvViewModel(application: Application) : AndroidViewModel(application) {
                 channels = channels,
                 selectedIndex = selectedIndex,
                 catalogOrigin = origin,
+                catalogRevision = it.catalogRevision + 1,
                 isLoading = false,
                 playbackMessage = "频道已加载",
                 errorMessage = null
