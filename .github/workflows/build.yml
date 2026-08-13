@@ -110,8 +110,6 @@ jobs:
     permissions:
       actions: read
       contents: write
-    env:
-      RELEASE_KEY: build-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
     steps:
       - name: Download APK artifact
         uses: actions/download-artifact@v4
@@ -133,17 +131,23 @@ jobs:
           server_package=$(find release-assets/server -maxdepth 1 -type f -name '*.tar.gz' -print -quit)
           test -n "$apk"
           test -n "$server_package"
-          mv "$apk" "release-assets/hometv-${RELEASE_KEY}-debug.apk"
-          mv "$server_package" "release-assets/hometv-server-${RELEASE_KEY}.tar.gz"
+          mv "$apk" "release-assets/hometv-debug.apk"
+          mv "$server_package" "release-assets/hometv-server.tar.gz"
           ls -lh release-assets
 
-      - name: Create unique GitHub Release
+      - name: Delete previous latest Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release delete latest --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes || true
+
+      - name: Create latest GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.RELEASE_KEY }}
-          name: HomeTV ${{ env.RELEASE_KEY }}
+          tag_name: latest
+          name: HomeTV Latest
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
+          make_latest: true
           files: |
-            release-assets/hometv-${{ env.RELEASE_KEY }}-debug.apk
-            release-assets/hometv-server-${{ env.RELEASE_KEY }}.tar.gz
+            release-assets/hometv-debug.apk
+            release-assets/hometv-server.tar.gz
