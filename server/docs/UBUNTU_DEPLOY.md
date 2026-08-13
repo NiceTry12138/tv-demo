@@ -36,7 +36,7 @@ node --version
 
 ## 3. 下载和构建
 
-可以直接使用 GitHub Actions 产出的服务器包，或在 Ubuntu 上从源码构建。下面先写源码方式：
+可以直接使用 GitHub Release 中的服务器包，或在 Ubuntu 上从源码构建。下面先写源码方式：
 
 ```bash
 sudo git clone https://github.com/NiceTry12138/tv-demo.git /opt/tv-demo
@@ -46,11 +46,11 @@ sudo npm test
 sudo npm run build
 ```
 
-如果使用 Actions Artifact：
+如果使用 GitHub Release：
 
-1. 在 GitHub Actions 运行记录下载 `home-tv-server-<commit-sha>` Artifact。
-2. 先解开 GitHub 下载的外层 ZIP，得到 `.tar.gz`。
-3. 上传 `.tar.gz` 到服务器并解压：
+1. 打开仓库 Releases，选择目标构建。
+2. 下载 `hometv-server-build-<run-id>-<attempt>-<commit-sha>.tar.gz`。
+3. 上传到服务器并解压：
 
 ```bash
 sudo mkdir -p /opt/tv-demo/server

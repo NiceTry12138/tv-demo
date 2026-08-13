@@ -64,11 +64,21 @@ CHANNELS_URL=https://your-domain.example/iptv/v1/channels.json
 
 - `Build Android TV APK`：测试并构建 `app-debug.apk`。
 - `Build server package`：运行服务器测试、类型检查、编译，并生成可部署的 `.tar.gz`。
+- `Publish GitHub Release`：仅 `main` push/手动运行时创建唯一 Release，并上传 APK 与服务器包。
 
 在 GitHub 仓库的 Actions 页面打开对应运行记录，在 Artifacts 下载：
 
 - `android-tv-apk-<commit-sha>`
 - `home-tv-server-<commit-sha>`
+
+`main` 构建成功后，Release 页面还会出现：
+
+- `hometv-build-<run-id>-<attempt>-<commit-sha>-debug.apk`
+- `hometv-server-build-<run-id>-<attempt>-<commit-sha>.tar.gz`
+
+Release Tag 同样使用 `build-<run-id>-<attempt>-<commit-sha>`，每次运行、重跑均唯一，
+不会覆盖已有 Release 或附件。PR 不创建 Release。Actions Artifact 保留 14 天；Release
+附件不会按该期限自动删除，部署时优先从 Releases 下载。
 
 如需把自有服务器地址编入 APK，在仓库 `Settings → Secrets and variables → Actions` 新增
 `CHANNELS_URL` Secret。未配置时 App 使用内置示例。Secret 不会写入 Git，但 URL 会进入
