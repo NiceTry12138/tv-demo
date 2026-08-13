@@ -12,7 +12,11 @@ class ServerEndpointTest {
         assertEquals("http://192.168.1.20:8080/check", endpoint.checkUrl)
         assertEquals(
             "http://192.168.1.20:8080/iptv/v1/channels.json",
-            endpoint.channelsUrl
+            endpoint.channelsUrl(false)
+        )
+        assertEquals(
+            "http://192.168.1.20:8080/iptv/v1/channels.json?country=CN",
+            endpoint.channelsUrl(true)
         )
     }
 
