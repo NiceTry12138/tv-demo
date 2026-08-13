@@ -26,7 +26,7 @@ $env:ANDROID_HOME="$env:LOCALAPPDATA\Android\Sdk"
 
 ## Server
 
-`server/` 使用 Node.js 22 和 TypeScript。它定期下载 iptv-org 全量和 CN M3U，解析、合并频道，
+`server/` 使用 Node.js 22 和 TypeScript。它定期更新 iptv-org Git 仓库，读取全量和 CN M3U，解析、合并频道，
 保留上一份成功数据，并向 App 提供 JSON。它不转发视频流。
 对外 API 只接受 POST；POST 本身不提供身份认证。
 

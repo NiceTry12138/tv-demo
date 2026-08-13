@@ -1,12 +1,14 @@
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 
 export interface Config {
-  allUpstreamUrl: string;
-  cnUpstreamUrl: string;
+  repositoryUrl: string;
+  repositoryDir: string;
+  allPlaylistPath: string;
+  cnPlaylistPath: string;
   host: string;
   port: number;
   syncIntervalMs: number;
-  fetchTimeoutMs: number;
+  gitTimeoutMs: number;
   dataDir: string;
 }
 
@@ -27,25 +29,19 @@ function portNumber(value: string | undefined): number {
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
-  const allUpstreamUrl = env.UPSTREAM_ALL_M3U_URL ??
-    "https://iptv-org.github.io/iptv/index.m3u";
-  const cnUpstreamUrl = env.UPSTREAM_CN_M3U_URL ??
-    env.UPSTREAM_M3U_URL ?? "https://iptv-org.github.io/iptv/countries/cn.m3u";
-  const upstreams: Array<[string, string]> = [
-    ["UPSTREAM_ALL_M3U_URL", allUpstreamUrl],
-    ["UPSTREAM_CN_M3U_URL", cnUpstreamUrl]
-  ];
-  for (const [name, value] of upstreams) {
-    if (!/^https?:\/\//i.test(value)) throw new Error(`${name} 必须是 HTTP 或 HTTPS 地址`);
-  }
+  const repositoryUrl = env.IPTV_REPOSITORY_URL ?? "https://github.com/iptv-org/iptv.git";
+  if (!/^https?:\/\//i.test(repositoryUrl)) throw new Error("IPTV_REPOSITORY_URL 必须是 HTTP 或 HTTPS 地址");
+  const dataDir = resolve(env.DATA_DIR ?? "./data");
 
   return {
-    allUpstreamUrl,
-    cnUpstreamUrl,
+    repositoryUrl,
+    repositoryDir: resolve(env.IPTV_REPOSITORY_DIR ?? join(dataDir, "iptv-org")),
+    allPlaylistPath: env.IPTV_ALL_PLAYLIST_PATH ?? "index.m3u",
+    cnPlaylistPath: env.IPTV_CN_PLAYLIST_PATH ?? "countries/cn.m3u",
     host: env.HOST ?? "0.0.0.0",
     port: portNumber(env.PORT),
     syncIntervalMs: positiveNumber("SYNC_INTERVAL_HOURS", env.SYNC_INTERVAL_HOURS, 6) * 3_600_000,
-    fetchTimeoutMs: positiveNumber("FETCH_TIMEOUT_MS", env.FETCH_TIMEOUT_MS, 30_000),
-    dataDir: resolve(env.DATA_DIR ?? "./data")
+    gitTimeoutMs: positiveNumber("GIT_TIMEOUT_MS", env.GIT_TIMEOUT_MS, 120_000),
+    dataDir
   };
 }

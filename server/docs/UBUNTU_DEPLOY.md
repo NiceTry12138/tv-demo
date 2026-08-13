@@ -49,7 +49,7 @@ sudo npm run build
 如果使用 GitHub Release：
 
 1. 打开仓库 Releases，选择目标构建。
-2. 下载 `hometv-server-build-<run-id>-<attempt>-<commit-sha>.tar.gz`。
+2. 下载 Release 中固定名称的 `hometv-server.tar.gz`。
 3. 上传到服务器并解压：
 
 ```bash
@@ -90,13 +90,14 @@ curl -s -X POST http://127.0.0.1:8080/iptv/v1/status.json | python3 -m json.tool
 curl -s -X POST 'http://127.0.0.1:8080/iptv/v1/status.json?country=CN' | python3 -m json.tool
 ```
 
-首次同步通常数秒完成。日志：
+首次同步会先浅克隆 iptv-org Git 仓库，耗时取决于服务器到 GitHub 的网络；之后每次同步执行
+`git pull --ff-only`。日志：
 
 ```bash
 sudo journalctl -u home-tv-server -f
 ```
 
-数据保存在 `/var/lib/home-tv-server`，代码更新不会删除它。
+频道数据和 iptv-org 本地仓库均保存在 `/var/lib/home-tv-server`，代码更新不会删除它。
 
 ### 局域网 IP + 端口直连（调试）
 

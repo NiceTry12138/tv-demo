@@ -11,12 +11,14 @@ import { CN_CHANNELS_FILE, publishCatalog } from "../src/storage.js";
 test("HTTP 服务返回健康状态、频道数据和未找到", async () => {
   const directory = await mkdtemp(join(tmpdir(), "home-tv-http-"));
   const config: Config = {
-    allUpstreamUrl: "https://example.com/all.m3u",
-    cnUpstreamUrl: "https://example.com/cn.m3u",
+    repositoryUrl: "https://example.com/iptv.git",
+    repositoryDir: join(directory, "iptv-org"),
+    allPlaylistPath: "index.m3u",
+    cnPlaylistPath: "countries/cn.m3u",
     host: "127.0.0.1",
     port: 0,
     syncIntervalMs: 60_000,
-    fetchTimeoutMs: 1_000,
+    gitTimeoutMs: 1_000,
     dataDir: directory
   };
   const server = createHttpServer(config);

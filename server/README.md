@@ -6,10 +6,10 @@ Node.js 22 + TypeScript 服务。定时同步 iptv-org 全量和 CN M3U，将其
 ## 模块与原理
 
 ```text
-iptv-org index.m3u + countries/cn.m3u
+iptv-org Git 仓库：index.m3u + countries/cn.m3u
        |
        v
-CatalogSynchronizer -- 下载、超时、互斥
+CatalogSynchronizer -- Git 更新、解析、互斥
        |
        v
 M3U parser -- 元数据、请求头、URL
@@ -25,7 +25,8 @@ HTTP server -- channels/status/health/readiness
 ```
 
 - `src/m3u.ts`：解析 `#EXTINF`、`#EXTVLCOPT`、`#EXTHTTP`；按 `tvg-id` 或频道名合并。
-- `src/synchronizer.ts`：独立同步全量和 CN。任一失败都不会覆盖该目录旧数据。
+- `src/repository.ts`：首次浅克隆 iptv-org，后续执行 `git pull --ff-only`；只读取两个 M3U 文件。
+- `src/synchronizer.ts`：独立解析全量和 CN。任一失败都不会覆盖该目录旧数据。
 - `src/storage.ts`：全量写 `channels.json`，CN 写 `channels-cn.json`，均原子发布并保留上一版。
 - `src/http-server.ts`：只读 JSON 接口，频道尚未生成时返回 HTTP 503。
 - `src/index.ts`：启动 HTTP 服务、立即同步一次，之后按间隔同步；同步任务不会重叠。
@@ -57,12 +58,14 @@ npm run sync
 
 | 变量 | 默认值 | 作用 |
 |---|---|---|
-| `UPSTREAM_ALL_M3U_URL` | iptv-org `index.m3u` | 全量上游 M3U |
-| `UPSTREAM_CN_M3U_URL` | iptv-org `countries/cn.m3u` | CN 上游 M3U |
+| `IPTV_REPOSITORY_URL` | `https://github.com/iptv-org/iptv.git` | iptv-org Git 仓库 |
+| `IPTV_REPOSITORY_DIR` | `./data/iptv-org` | 本地仓库目录 |
+| `IPTV_ALL_PLAYLIST_PATH` | `index.m3u` | 全量 M3U 路径 |
+| `IPTV_CN_PLAYLIST_PATH` | `countries/cn.m3u` | CN M3U 路径 |
 | `HOST` | `0.0.0.0` | 监听地址 |
 | `PORT` | `8080` | 监听端口 |
 | `SYNC_INTERVAL_HOURS` | `6` | 同步间隔 |
-| `FETCH_TIMEOUT_MS` | `30000` | 上游下载超时 |
+| `GIT_TIMEOUT_MS` | `120000` | Git 操作超时 |
 | `DATA_DIR` | `./data` | 发布目录 |
 
 ## HTTP 接口
