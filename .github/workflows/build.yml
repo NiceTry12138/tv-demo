@@ -1,0 +1,103 @@
+name: Build Android TV and server
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-tv:
+    name: Build Android TV APK
+    runs-on: ubuntu-latest
+    env:
+      CHANNELS_URL: ${{ secrets.CHANNELS_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Configure optional channel server URL
+        if: ${{ env.CHANNELS_URL != '' }}
+        working-directory: android-tv
+        run: printf 'CHANNELS_URL=%s\n' "$CHANNELS_URL" > local.properties
+
+      - name: Test and build APK
+        working-directory: android-tv
+        run: |
+          chmod +x ./gradlew
+          ./gradlew testDebugUnitTest assembleDebug lintDebug --console=plain
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-tv-apk-${{ github.sha }}
+          path: android-tv/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  server:
+    name: Build server package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install dependencies
+        working-directory: server
+        run: npm ci
+
+      - name: Test, typecheck and build
+        working-directory: server
+        run: |
+          npm test
+          npm run typecheck
+          npm run build
+
+      - name: Create server package
+        working-directory: server
+        env:
+          PACKAGE_PATH: ${{ runner.temp }}/home-tv-server-${{ github.sha }}.tar.gz
+        run: |
+          tar -czf "$PACKAGE_PATH" \
+            dist src test tsconfig.json package.json package-lock.json README.md \
+            Dockerfile compose.yaml .dockerignore .env.example \
+            deploy docs
+
+      - name: Upload server package
+        uses: actions/upload-artifact@v4
+        with:
+          name: home-tv-server-${{ github.sha }}
+          path: ${{ runner.temp }}/home-tv-server-${{ github.sha }}.tar.gz
+          if-no-files-found: error
+          retention-days: 14

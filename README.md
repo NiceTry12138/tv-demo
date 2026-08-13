@@ -57,3 +57,19 @@ CHANNELS_URL=https://your-domain.example/iptv/v1/channels.json
 ```
 
 该文件已忽略，不会提交私人服务器地址。
+
+## GitHub Actions 构建
+
+`.github/workflows/build.yml` 在 `main` push、Pull Request 或手动触发时运行两个任务：
+
+- `Build Android TV APK`：测试并构建 `app-debug.apk`。
+- `Build server package`：运行服务器测试、类型检查、编译，并生成可部署的 `.tar.gz`。
+
+在 GitHub 仓库的 Actions 页面打开对应运行记录，在 Artifacts 下载：
+
+- `android-tv-apk-<commit-sha>`
+- `home-tv-server-<commit-sha>`
+
+如需把自有服务器地址编入 APK，在仓库 `Settings → Secrets and variables → Actions` 新增
+`CHANNELS_URL` Secret。未配置时 App 使用内置示例。Secret 不会写入 Git，但 URL 会进入
+APK，可以被提取；不要在 URL 中放密码或访问令牌。
