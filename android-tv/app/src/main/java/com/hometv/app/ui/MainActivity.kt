@@ -211,6 +211,7 @@ class MainActivity : AppCompatActivity(), PlaybackController.Listener {
             dialogBinding.serverIpInput.setText(endpoint.ip)
             dialogBinding.serverPortInput.setText(endpoint.port.toString())
         } ?: dialogBinding.serverPortInput.setText(DEFAULT_SERVER_PORT.toString())
+        dialogBinding.cnOnlySwitch.isChecked = viewModel.savedServerCnOnly()
 
         val dialog = AlertDialog.Builder(this)
             .setView(dialogBinding.root)
@@ -226,7 +227,8 @@ class MainActivity : AppCompatActivity(), PlaybackController.Listener {
                 dialogBinding.serverSettingsStatus.text = "正在连接服务器..."
                 viewModel.checkAndSaveServer(
                     dialogBinding.serverIpInput.text.toString(),
-                    dialogBinding.serverPortInput.text.toString()
+                    dialogBinding.serverPortInput.text.toString(),
+                    dialogBinding.cnOnlySwitch.isChecked
                 ) { result ->
                     if (isFinishing || isDestroyed || !dialog.isShowing) return@checkAndSaveServer
                     result.onSuccess {

@@ -87,6 +87,7 @@ sudo systemctl status home-tv-server --no-pager
 curl -i http://127.0.0.1:8080/healthz
 curl -i http://127.0.0.1:8080/readyz
 curl -s http://127.0.0.1:8080/iptv/v1/status.json | python3 -m json.tool
+curl -s 'http://127.0.0.1:8080/iptv/v1/status.json?country=CN' | python3 -m json.tool
 ```
 
 首次同步通常数秒完成。日志：
@@ -150,6 +151,7 @@ sudo certbot renew --dry-run
 ```bash
 curl -i https://你的真实域名/iptv/v1/status.json
 curl -I https://你的真实域名/iptv/v1/channels.json
+curl -I 'https://你的真实域名/iptv/v1/channels.json?country=CN'
 ```
 
 App 配置：

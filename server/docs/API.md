@@ -19,7 +19,14 @@
 
 ## `GET /iptv/v1/channels.json`
 
-Android TV App 使用的频道目录。首次同步未完成时返回 `503`。成功响应：
+Android TV App 使用的全量频道目录。增加 `country=CN` 返回 CN 目录：
+
+```text
+GET /iptv/v1/channels.json             全部频道
+GET /iptv/v1/channels.json?country=CN  CN 频道
+```
+
+`country` 不区分大小写。当前仅支持 `CN`；其他值返回 `400`。对应目录首次同步未完成时返回 `503`。成功响应：
 
 ```json
 {
@@ -58,7 +65,7 @@ Android TV App 使用的频道目录。首次同步未完成时返回 `503`。�
 
 ## `GET /iptv/v1/status.json`
 
-同步状态，不是 App 播放依赖。`Cache-Control: no-store`。
+全量同步状态，不是 App 播放依赖。增加 `?country=CN` 读取 CN 独立状态。`Cache-Control: no-store`。
 
 ```json
 {
@@ -90,6 +97,7 @@ GET /readyz   channels.json 已存在即 200；否则 503
 |---|---|
 | `200` | 成功 |
 | `304` | ETag 未变化 |
+| `400` | 不支持的 `country` 参数 |
 | `404` | 路径不存在 |
 | `405` | 只允许 GET/HEAD |
 | `500` | 本地数据读取异常 |

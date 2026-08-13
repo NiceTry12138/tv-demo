@@ -23,7 +23,8 @@ class TvViewModel(application: Application) : AndroidViewModel(application) {
     private val channelCache = ChannelCache(application)
     private val serverConfigStore = ServerConfigStore(application)
     private val serverApi = ServerApi()
-    private var channelsUrl = serverConfigStore.load()?.channelsUrl ?: BuildConfig.CHANNELS_URL
+    private var cnOnly = serverConfigStore.loadCnOnly()
+    private var channelsUrl = serverConfigStore.load()?.channelsUrl(cnOnly) ?: BuildConfig.CHANNELS_URL
 
     private val _uiState = MutableStateFlow(TvUiState())
     val uiState = _uiState.asStateFlow()
@@ -64,9 +65,12 @@ class TvViewModel(application: Application) : AndroidViewModel(application) {
 
     fun savedServerEndpoint(): ServerEndpoint? = serverConfigStore.load()
 
+    fun savedServerCnOnly(): Boolean = serverConfigStore.loadCnOnly()
+
     fun checkAndSaveServer(
         ip: String,
         port: String,
+        cnOnly: Boolean,
         onComplete: (Result<ServerCheckResponse>) -> Unit
     ) {
         val endpoint = runCatching { ServerEndpoint.parse(ip, port) }
@@ -78,8 +82,9 @@ class TvViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val result = runCatching {
                 val check = serverApi.check(endpoint)
-                serverConfigStore.save(endpoint)
-                channelsUrl = endpoint.channelsUrl
+                serverConfigStore.save(endpoint, cnOnly)
+                this@TvViewModel.cnOnly = cnOnly
+                channelsUrl = endpoint.channelsUrl(cnOnly)
                 check
             }
             result.onSuccess { check ->

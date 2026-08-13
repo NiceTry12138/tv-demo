@@ -3,11 +3,12 @@ import { stat } from "node:fs/promises";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { join } from "node:path";
 import type { Config } from "./config.js";
-import { CHANNELS_FILE, isCatalogReady, STATUS_FILE } from "./storage.js";
+import { CN_CHANNELS_FILE, CN_STATUS_FILE, CHANNELS_FILE, isCatalogReady, STATUS_FILE } from "./storage.js";
 
 export function createHttpServer(config: Config): Server {
   return createServer(async (request, response) => {
-    const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+    const url = new URL(request.url ?? "/", "http://localhost");
+    const pathname = url.pathname;
     if (request.method !== "GET" && request.method !== "HEAD") {
       sendJson(response, 405, { error: "Method Not Allowed" });
       return;
@@ -18,7 +19,7 @@ export function createHttpServer(config: Config): Server {
       return;
     }
     if (pathname === "/check") {
-      const ready = await isCatalogReady(config.dataDir);
+      const ready = await isCatalogReady(config.dataDir, CHANNELS_FILE) || await isCatalogReady(config.dataDir, CN_CHANNELS_FILE);
       sendJson(response, 200, {
         service: "home-tv-server",
         apiVersion: 1,
@@ -28,7 +29,7 @@ export function createHttpServer(config: Config): Server {
       return;
     }
     if (pathname === "/readyz") {
-      const ready = await isCatalogReady(config.dataDir);
+      const ready = await isCatalogReady(config.dataDir, CHANNELS_FILE) || await isCatalogReady(config.dataDir, CN_CHANNELS_FILE);
       sendJson(
         response,
         ready ? 200 : 503,
@@ -38,11 +39,21 @@ export function createHttpServer(config: Config): Server {
       return;
     }
     if (pathname === "/iptv/v1/channels.json") {
-      await sendFile(request, response, join(config.dataDir, CHANNELS_FILE), request.method === "HEAD", 300);
+      const country = url.searchParams.get("country");
+      if (country !== null && !/^CN$/i.test(country)) {
+        sendJson(response, 400, { error: "当前仅支持 country=CN" }, request.method === "HEAD");
+        return;
+      }
+      await sendFile(request, response, join(config.dataDir, country === null ? CHANNELS_FILE : CN_CHANNELS_FILE), request.method === "HEAD", 300);
       return;
     }
     if (pathname === "/iptv/v1/status.json") {
-      await sendFile(request, response, join(config.dataDir, STATUS_FILE), request.method === "HEAD", 0);
+      const country = url.searchParams.get("country");
+      if (country !== null && !/^CN$/i.test(country)) {
+        sendJson(response, 400, { error: "当前仅支持 country=CN" }, request.method === "HEAD");
+        return;
+      }
+      await sendFile(request, response, join(config.dataDir, country === null ? STATUS_FILE : CN_STATUS_FILE), request.method === "HEAD", 0);
       return;
     }
     sendJson(response, 404, { error: "Not Found" }, request.method === "HEAD");

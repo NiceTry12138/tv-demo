@@ -26,7 +26,7 @@ $env:ANDROID_HOME="$env:LOCALAPPDATA\Android\Sdk"
 
 ## Server
 
-`server/` 使用 Node.js 22 和 TypeScript。它定期下载 iptv-org CN M3U，解析、合并频道，
+`server/` 使用 Node.js 22 和 TypeScript。它定期下载 iptv-org 全量和 CN M3U，解析、合并频道，
 保留上一份成功数据，并向 App 提供 JSON。它不转发视频流。
 
 开发运行：
@@ -41,6 +41,7 @@ npm run dev
 接口：
 
 - `GET /iptv/v1/channels.json`
+- `GET /iptv/v1/channels.json?country=CN`
 - `GET /iptv/v1/status.json`
 - `GET /healthz`
 - `GET /readyz`
@@ -84,5 +85,5 @@ Release Tag 同样使用 `build-<run-id>-<attempt>-<commit-sha>`，每次运行�
 `CHANNELS_URL` Secret。未配置时 App 使用内置示例。Secret 不会写入 Git，但 URL 会进入
 APK，可以被提取；不要在 URL 中放密码或访问令牌。
 
-APK 也支持在 App 的“服务器设置”中输入 IPv4 和端口。运行时保存的设置优先于构建时
+APK 也支持在 App 的“服务器设置”中输入 IPv4、端口，并选择仅 CN 或全部频道。运行时保存的设置优先于构建时
 `CHANNELS_URL`，适合局域网和调试环境。

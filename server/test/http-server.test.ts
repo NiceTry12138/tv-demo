@@ -6,12 +6,13 @@ import { join } from "node:path";
 import test from "node:test";
 import type { Config } from "../src/config.js";
 import { createHttpServer } from "../src/http-server.js";
-import { publishCatalog } from "../src/storage.js";
+import { CN_CHANNELS_FILE, publishCatalog } from "../src/storage.js";
 
 test("HTTP 服务返回健康状态、频道数据和未找到", async () => {
   const directory = await mkdtemp(join(tmpdir(), "home-tv-http-"));
   const config: Config = {
-    upstreamUrl: "https://example.com/cn.m3u",
+    allUpstreamUrl: "https://example.com/all.m3u",
+    cnUpstreamUrl: "https://example.com/cn.m3u",
     host: "127.0.0.1",
     port: 0,
     syncIntervalMs: 60_000,
@@ -35,6 +36,7 @@ test("HTTP 服务返回健康状态、频道数据和未找到", async () => {
     });
     assert.equal((await fetch(`${baseUrl}/readyz`)).status, 503);
     assert.equal((await fetch(`${baseUrl}/iptv/v1/channels.json`)).status, 503);
+    assert.equal((await fetch(`${baseUrl}/iptv/v1/channels.json?country=CN`)).status, 503);
 
     await publishCatalog(directory, {
       version: "v1",
@@ -43,6 +45,15 @@ test("HTTP 服务返回健康状态、频道数据和未找到", async () => {
     const response = await fetch(`${baseUrl}/iptv/v1/channels.json`);
     assert.equal(response.status, 200);
     assert.equal((await response.json() as { version: string }).version, "v1");
+    await publishCatalog(directory, {
+      version: "cn-v1",
+      channels: [{ id: "cn", name: "CN", logo: null, group: "CN", sources: [] }]
+    }, CN_CHANNELS_FILE);
+    const cnResponse = await fetch(`${baseUrl}/iptv/v1/channels.json?country=CN`);
+    assert.equal(cnResponse.status, 200);
+    assert.equal((await cnResponse.json() as { version: string }).version, "cn-v1");
+    assert.equal((await fetch(`${baseUrl}/iptv/v1/channels.json?country=cn`)).status, 200);
+    assert.equal((await fetch(`${baseUrl}/iptv/v1/channels.json?country=US`)).status, 400);
     assert.equal((await fetch(`${baseUrl}/readyz`)).status, 200);
     assert.equal((await fetch(`${baseUrl}/check`).then((result) => result.json()) as {
       catalogReady: boolean

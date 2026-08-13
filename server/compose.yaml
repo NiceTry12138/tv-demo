@@ -7,7 +7,8 @@ services:
     security_opt:
       - no-new-privileges:true
     environment:
-      UPSTREAM_M3U_URL: https://iptv-org.github.io/iptv/countries/cn.m3u
+      UPSTREAM_ALL_M3U_URL: https://iptv-org.github.io/iptv/index.m3u
+      UPSTREAM_CN_M3U_URL: https://iptv-org.github.io/iptv/countries/cn.m3u
       SYNC_INTERVAL_HOURS: 6
       FETCH_TIMEOUT_MS: 30000
     ports:

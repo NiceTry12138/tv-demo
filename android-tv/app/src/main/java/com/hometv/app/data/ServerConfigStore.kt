@@ -13,11 +13,14 @@ class ServerConfigStore(context: Context) {
         return runCatching { ServerEndpoint.parse(ip, port.toString()) }.getOrNull()
     }
 
-    suspend fun save(endpoint: ServerEndpoint) = withContext(Dispatchers.IO) {
+    fun loadCnOnly(): Boolean = preferences.getBoolean(KEY_SERVER_CN_ONLY, true)
+
+    suspend fun save(endpoint: ServerEndpoint, cnOnly: Boolean) = withContext(Dispatchers.IO) {
         check(
             preferences.edit()
                 .putString(KEY_SERVER_IP, endpoint.ip)
                 .putInt(KEY_SERVER_PORT, endpoint.port)
+                .putBoolean(KEY_SERVER_CN_ONLY, cnOnly)
                 .commit()
         ) { "无法保存服务器设置" }
     }
@@ -26,5 +29,6 @@ class ServerConfigStore(context: Context) {
         const val PREFERENCES_NAME = "server_configuration"
         const val KEY_SERVER_IP = "server_ip"
         const val KEY_SERVER_PORT = "server_port"
+        const val KEY_SERVER_CN_ONLY = "server_cn_only"
     }
 }

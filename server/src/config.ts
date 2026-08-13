@@ -1,7 +1,8 @@
 import { resolve } from "node:path";
 
 export interface Config {
-  upstreamUrl: string;
+  allUpstreamUrl: string;
+  cnUpstreamUrl: string;
   host: string;
   port: number;
   syncIntervalMs: number;
@@ -26,14 +27,21 @@ function portNumber(value: string | undefined): number {
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
-  const upstreamUrl = env.UPSTREAM_M3U_URL ??
-    "https://iptv-org.github.io/iptv/countries/cn.m3u";
-  if (!/^https?:\/\//i.test(upstreamUrl)) {
-    throw new Error("UPSTREAM_M3U_URL 必须是 HTTP 或 HTTPS 地址");
+  const allUpstreamUrl = env.UPSTREAM_ALL_M3U_URL ??
+    "https://iptv-org.github.io/iptv/index.m3u";
+  const cnUpstreamUrl = env.UPSTREAM_CN_M3U_URL ??
+    env.UPSTREAM_M3U_URL ?? "https://iptv-org.github.io/iptv/countries/cn.m3u";
+  const upstreams: Array<[string, string]> = [
+    ["UPSTREAM_ALL_M3U_URL", allUpstreamUrl],
+    ["UPSTREAM_CN_M3U_URL", cnUpstreamUrl]
+  ];
+  for (const [name, value] of upstreams) {
+    if (!/^https?:\/\//i.test(value)) throw new Error(`${name} 必须是 HTTP 或 HTTPS 地址`);
   }
 
   return {
-    upstreamUrl,
+    allUpstreamUrl,
+    cnUpstreamUrl,
     host: env.HOST ?? "0.0.0.0",
     port: portNumber(env.PORT),
     syncIntervalMs: positiveNumber("SYNC_INTERVAL_HOURS", env.SYNC_INTERVAL_HOURS, 6) * 3_600_000,

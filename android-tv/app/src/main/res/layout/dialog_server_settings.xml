@@ -39,6 +39,16 @@
         android:textColorHint="@color/panel_muted"
         android:textSize="16sp" />
 
+    <androidx.appcompat.widget.SwitchCompat
+        android:id="@+id/cn_only_switch"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:checked="true"
+        android:text="只显示 CN 地区频道"
+        android:textColor="@color/white"
+        android:textSize="16sp" />
+
     <TextView
         android:id="@+id/server_settings_status"
         android:layout_width="match_parent"

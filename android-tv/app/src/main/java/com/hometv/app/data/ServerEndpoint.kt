@@ -7,8 +7,9 @@ data class ServerEndpoint(
     val baseUrl: String
         get() = "http://$ip:$port"
 
-    val channelsUrl: String
-        get() = "$baseUrl/iptv/v1/channels.json"
+    fun channelsUrl(cnOnly: Boolean = true): String =
+        if (cnOnly) "$baseUrl/iptv/v1/channels.json?country=CN"
+        else "$baseUrl/iptv/v1/channels.json"
 
     val checkUrl: String
         get() = "$baseUrl/check"
