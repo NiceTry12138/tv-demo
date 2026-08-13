@@ -54,6 +54,8 @@ class MainActivity : AppCompatActivity(), PlaybackController.Listener {
             }
         }
         binding.channelList.layoutManager = LinearLayoutManager(this)
+        // Android 6 RecyclerView has ChildHelper issues during animated list updates.
+        binding.channelList.itemAnimator = null
         binding.channelList.adapter = channelAdapter
         binding.serverSettingsButton.setOnClickListener { showServerSettings() }
 

@@ -49,9 +49,6 @@ class ChannelAdapter(
                 channel.name
             )
             binding.root.setOnClickListener { onChannelSelected(bindingAdapterPosition) }
-            binding.root.setOnFocusChangeListener { _, hasFocus ->
-                if (hasFocus) binding.root.bringToFront()
-            }
         }
     }
 
