@@ -9,13 +9,13 @@ export function createHttpServer(config: Config): Server {
   return createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", "http://localhost");
     const pathname = url.pathname;
-    if (request.method !== "GET" && request.method !== "HEAD") {
+    if (request.method !== "POST") {
       sendJson(response, 405, { error: "Method Not Allowed" });
       return;
     }
 
     if (pathname === "/healthz") {
-      sendJson(response, 200, { status: "ok" }, request.method === "HEAD");
+      sendJson(response, 200, { status: "ok" });
       return;
     }
     if (pathname === "/check") {
@@ -25,7 +25,7 @@ export function createHttpServer(config: Config): Server {
         apiVersion: 1,
         status: "ok",
         catalogReady: ready
-      }, request.method === "HEAD");
+      });
       return;
     }
     if (pathname === "/readyz") {
@@ -34,29 +34,28 @@ export function createHttpServer(config: Config): Server {
         response,
         ready ? 200 : 503,
         { status: ready ? "ready" : "not_ready" },
-        request.method === "HEAD"
       );
       return;
     }
     if (pathname === "/iptv/v1/channels.json") {
       const country = url.searchParams.get("country");
       if (country !== null && !/^CN$/i.test(country)) {
-        sendJson(response, 400, { error: "当前仅支持 country=CN" }, request.method === "HEAD");
+        sendJson(response, 400, { error: "当前仅支持 country=CN" });
         return;
       }
-      await sendFile(request, response, join(config.dataDir, country === null ? CHANNELS_FILE : CN_CHANNELS_FILE), request.method === "HEAD", 300);
+      await sendFile(request, response, join(config.dataDir, country === null ? CHANNELS_FILE : CN_CHANNELS_FILE), 300);
       return;
     }
     if (pathname === "/iptv/v1/status.json") {
       const country = url.searchParams.get("country");
       if (country !== null && !/^CN$/i.test(country)) {
-        sendJson(response, 400, { error: "当前仅支持 country=CN" }, request.method === "HEAD");
+        sendJson(response, 400, { error: "当前仅支持 country=CN" });
         return;
       }
-      await sendFile(request, response, join(config.dataDir, country === null ? STATUS_FILE : CN_STATUS_FILE), request.method === "HEAD", 0);
+      await sendFile(request, response, join(config.dataDir, country === null ? STATUS_FILE : CN_STATUS_FILE), 0);
       return;
     }
-    sendJson(response, 404, { error: "Not Found" }, request.method === "HEAD");
+    sendJson(response, 404, { error: "Not Found" });
   });
 }
 
@@ -64,7 +63,6 @@ async function sendFile(
   request: IncomingMessage,
   response: ServerResponse,
   path: string,
-  headOnly: boolean,
   maxAgeSeconds: number
 ): Promise<void> {
   try {
@@ -85,18 +83,17 @@ async function sendFile(
       ...headers,
       "Content-Length": file.size,
     });
-    if (headOnly) response.end();
-    else createReadStream(path).pipe(response);
+    createReadStream(path).pipe(response);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      sendJson(response, 503, { error: "频道数据尚未准备完成" }, headOnly);
+      sendJson(response, 503, { error: "频道数据尚未准备完成" });
       return;
     }
-    sendJson(response, 500, { error: "读取频道数据失败" }, headOnly);
+    sendJson(response, 500, { error: "读取频道数据失败" });
   }
 }
 
-function sendJson(response: ServerResponse, status: number, value: unknown, headOnly = false): void {
+function sendJson(response: ServerResponse, status: number, value: unknown): void {
   const body = `${JSON.stringify(value)}\n`;
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
@@ -104,5 +101,5 @@ function sendJson(response: ServerResponse, status: number, value: unknown, head
     "Cache-Control": "no-store",
     "X-Content-Type-Options": "nosniff"
   });
-  response.end(headOnly ? undefined : body);
+  response.end(body);
 }

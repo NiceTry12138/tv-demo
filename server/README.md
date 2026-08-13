@@ -68,16 +68,17 @@ npm run sync
 ## HTTP 接口
 
 ```text
-GET /iptv/v1/channels.json             全部频道
-GET /iptv/v1/channels.json?country=CN  CN 频道
-GET /iptv/v1/status.json               全量同步状态
-GET /iptv/v1/status.json?country=CN    CN 同步状态
-GET /check                  App 设置界面的服务器身份验证
-GET /healthz                进程存活检查
-GET /readyz                 是否已有可提供的频道目录
+POST /iptv/v1/channels.json             全部频道
+POST /iptv/v1/channels.json?country=CN  CN 频道
+POST /iptv/v1/status.json               全量同步状态
+POST /iptv/v1/status.json?country=CN    CN 同步状态
+POST /check                  App 设置界面的服务器身份验证
+POST /healthz                进程存活检查
+POST /readyz                 是否已有可提供的频道目录
 ```
 
 完整响应结构、状态码和 ETag 用法见 [HTTP API](docs/API.md)。
+接口只接受 POST；这只是避免浏览器地址栏直接打开，不是访问鉴权。
 
 ## Ubuntu 22.04 部署
 
@@ -92,9 +93,9 @@ GET /readyz                 是否已有可提供的频道目录
 
 ```bash
 docker compose up -d --build
-curl http://127.0.0.1:8080/healthz
-curl http://127.0.0.1:8080/readyz
-curl http://127.0.0.1:8080/iptv/v1/status.json
+curl -X POST http://127.0.0.1:8080/healthz
+curl -X POST http://127.0.0.1:8080/readyz
+curl -X POST http://127.0.0.1:8080/iptv/v1/status.json
 ```
 
 Compose 只绑定服务器本机 `127.0.0.1:8080`。用 Caddy 或 Nginx 反向代理并提供 HTTPS，

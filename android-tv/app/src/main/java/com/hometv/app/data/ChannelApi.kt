@@ -4,6 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
 
 class ChannelApi(
@@ -18,7 +19,7 @@ class ChannelApi(
 
     suspend fun download(): String = withContext(Dispatchers.IO) {
         check(isConfigured) { "未配置频道服务器地址" }
-        val request = Request.Builder().url(url).get().build()
+        val request = Request.Builder().url(url).post(ByteArray(0).toRequestBody()).build()
         client.newCall(request).execute().use { response ->
             check(response.isSuccessful) { "频道服务器返回 HTTP ${response.code}" }
             response.body?.string() ?: error("频道服务器返回空内容")
