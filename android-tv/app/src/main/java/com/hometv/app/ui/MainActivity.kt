@@ -4,10 +4,14 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.content.DialogInterface
+import android.content.Context
+import android.net.Uri
 import android.view.KeyEvent
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowManager
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -15,8 +19,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.hometv.app.BuildConfig
 import com.hometv.app.data.CatalogOrigin
 import com.hometv.app.data.Channel
+import com.hometv.app.data.ServerEndpoint
 import com.hometv.app.databinding.ActivityMainBinding
 import com.hometv.app.databinding.DialogServerSettingsBinding
 import com.hometv.app.player.PlaybackController
@@ -209,11 +215,17 @@ class MainActivity : AppCompatActivity(), PlaybackController.Listener {
 
     private fun showServerSettings() {
         val dialogBinding = DialogServerSettingsBinding.inflate(layoutInflater)
-        viewModel.savedServerEndpoint()?.let { endpoint ->
-            dialogBinding.serverIpInput.setText(endpoint.ip)
-            dialogBinding.serverPortInput.setText(endpoint.port.toString())
-        } ?: dialogBinding.serverPortInput.setText(DEFAULT_SERVER_PORT.toString())
+        val endpoint = viewModel.savedServerEndpoint() ?: configuredBuildEndpoint()
+        dialogBinding.serverIpInput.setText(endpoint?.ip ?: DEFAULT_SERVER_IP)
+        dialogBinding.serverPortInput.setText((endpoint?.port ?: DEFAULT_SERVER_PORT).toString())
         dialogBinding.cnOnlySwitch.isChecked = viewModel.savedServerCnOnly()
+
+        dialogBinding.serverIpInput.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) dialogBinding.serverIpInput.selectAll()
+        }
+        dialogBinding.serverPortInput.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) dialogBinding.serverPortInput.selectAll()
+        }
 
         val dialog = AlertDialog.Builder(this)
             .setView(dialogBinding.root)
@@ -223,6 +235,36 @@ class MainActivity : AppCompatActivity(), PlaybackController.Listener {
 
         dialog.setOnShowListener {
             val confirm = dialog.getButton(DialogInterface.BUTTON_POSITIVE)
+            val cancel = dialog.getButton(DialogInterface.BUTTON_NEGATIVE)
+            dialogBinding.cnOnlySwitch.nextFocusDownId = confirm.id
+            confirm.nextFocusUpId = dialogBinding.cnOnlySwitch.id
+            confirm.nextFocusLeftId = cancel.id
+            cancel.nextFocusRightId = confirm.id
+            dialogBinding.serverIpInput.setOnEditorActionListener { _, actionId, _ ->
+                if (actionId == EditorInfo.IME_ACTION_NEXT) {
+                    hideKeyboard(dialogBinding.serverIpInput)
+                    dialogBinding.serverPortInput.requestFocus()
+                    true
+                } else false
+            }
+            dialogBinding.serverPortInput.setOnEditorActionListener { _, actionId, _ ->
+                if (actionId == EditorInfo.IME_ACTION_NEXT || actionId == EditorInfo.IME_ACTION_DONE) {
+                    hideKeyboard(dialogBinding.serverPortInput)
+                    dialogBinding.cnOnlySwitch.requestFocus()
+                    true
+                } else false
+            }
+            dialogBinding.cnOnlySwitch.setOnKeyListener { _, keyCode, event ->
+                val isToggleKey = keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                        keyCode == KeyEvent.KEYCODE_ENTER ||
+                        keyCode == KeyEvent.KEYCODE_SPACE
+                if (isToggleKey && event.action == KeyEvent.ACTION_DOWN) {
+                    if (event.repeatCount == 0) {
+                        dialogBinding.cnOnlySwitch.isChecked = !dialogBinding.cnOnlySwitch.isChecked
+                    }
+                    true
+                } else isToggleKey
+            }
             confirm.setOnClickListener {
                 confirm.isEnabled = false
                 dialogBinding.serverSettingsStatus.setTextColor(getColor(com.hometv.app.R.color.panel_muted))
@@ -243,9 +285,22 @@ class MainActivity : AppCompatActivity(), PlaybackController.Listener {
                 }
             }
             dialogBinding.serverIpInput.requestFocus()
+            dialogBinding.serverIpInput.selectAll()
         }
         dialog.setOnDismissListener { binding.playerView.requestFocus() }
         dialog.show()
+    }
+
+    private fun configuredBuildEndpoint(): ServerEndpoint? = runCatching {
+        val uri = Uri.parse(BuildConfig.CHANNELS_URL)
+        val host = uri.host ?: error("未配置服务器地址")
+        val port = if (uri.port == -1) DEFAULT_SERVER_PORT else uri.port
+        ServerEndpoint.parse(host, port.toString())
+    }.getOrNull()
+
+    private fun hideKeyboard(view: View) {
+        (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
+            .hideSoftInputFromWindow(view.windowToken, 0)
     }
 
     private fun hideChannelPanel() {
@@ -283,6 +338,7 @@ class MainActivity : AppCompatActivity(), PlaybackController.Listener {
     private companion object {
         const val PANEL_HIDE_DELAY_MS = 8_000L
         const val STATUS_HIDE_DELAY_MS = 5_000L
+        const val DEFAULT_SERVER_IP = "192.168.1.100"
         const val DEFAULT_SERVER_PORT = 8080
     }
 }
