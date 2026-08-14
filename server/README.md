@@ -18,7 +18,10 @@ M3U parser -- 元数据、请求头、URL
 buildCatalog -- 同频道多源合并、去重
        |
        v
-storage -- 临时文件发布、保留上一版本
+CatalogHealthChecker -- 并发探测 HTTP/HLS，过滤失效源
+       |
+       v
+storage -- 原始目录与健康目录分离，原子发布、保留上一版本
        |
        v
 HTTP server -- channels/status/health/readiness
@@ -27,12 +30,14 @@ HTTP server -- channels/status/health/readiness
 - `src/m3u.ts`：解析 `#EXTINF`、`#EXTVLCOPT`、`#EXTHTTP`；按 `tvg-id` 或频道名合并。
 - `src/repository.ts`：首次浅克隆 iptv-org，后续执行 `git pull --ff-only`；只读取两个 M3U 文件。
 - `src/synchronizer.ts`：独立解析全量和 CN。任一失败都不会覆盖该目录旧数据。
-- `src/storage.ts`：全量写 `channels.json`，CN 写 `channels-cn.json`，均原子发布并保留上一版。
-- `src/http-server.ts`：只读 JSON 接口，频道尚未生成时返回 HTTP 503。
-- `src/index.ts`：启动 HTTP 服务、立即同步一次，之后按间隔同步；同步任务不会重叠。
+- `src/storage.ts`：原始目录写 `channels.json`/`channels-cn.json`，健康目录写
+  `channels.healthy.json`/`channels-cn.healthy.json`，均原子发布并保留上一版。
+- `src/health-checker.ts`：按配置并发检查播放源；HLS 会继续读取首个媒体播放列表/媒体字节。
+- `src/http-server.ts`：频道接口只返回健康目录；健康检查尚未完成时返回 HTTP 503。
+- `src/index.ts`：启动立即同步和检查；每天更新仓库，每小时检查播放源，任务不会重叠。
 
-第一版不探测每个视频源是否可播，输出 `status: "unknown"`。原因：服务端出口检测结果
-不能代表家庭网络或电视盒子一定可访问。App 仍会按源逐个尝试。后续可增加有限并发健康检测。
+健康检查只代表服务器出口能读取到响应，不是视频解码器，不能完全保证家庭网络、地区策略或
+Android 硬件解码一定可播。检查失败整轮不会覆盖已有健康缓存，避免短时网络故障导致目录为空。
 
 ## 本地运行
 
@@ -64,7 +69,10 @@ npm run sync
 | `IPTV_CN_PLAYLIST_PATH` | `countries/cn.m3u` | CN M3U 路径 |
 | `HOST` | `0.0.0.0` | 监听地址 |
 | `PORT` | `8080` | 监听端口 |
-| `SYNC_INTERVAL_HOURS` | `6` | 同步间隔 |
+| `REPOSITORY_UPDATE_INTERVAL_HOURS` | `24` | iptv-org Git 更新间隔 |
+| `HEALTH_CHECK_INTERVAL_HOURS` | `1` | 播放源健康检查间隔 |
+| `HEALTH_CHECK_TIMEOUT_MS` | `8000` | 单个播放源超时 |
+| `HEALTH_CHECK_CONCURRENCY` | `16` | 并发检查数量 |
 | `GIT_TIMEOUT_MS` | `120000` | Git 操作超时 |
 | `DATA_DIR` | `./data` | 发布目录 |
 
@@ -75,6 +83,8 @@ GET /iptv/v1/channels.json             全部频道
 GET /iptv/v1/channels.json?country=CN  CN 频道
 GET /iptv/v1/status.json               全量同步状态
 GET /iptv/v1/status.json?country=CN    CN 同步状态
+GET /iptv/v1/health-status.json        全量健康检查状态
+GET /iptv/v1/health-status.json?country=CN CN 健康检查状态
 GET /check                  App 设置界面的服务器身份验证
 GET /healthz                进程存活检查
 GET /readyz                 是否已有可提供的频道目录

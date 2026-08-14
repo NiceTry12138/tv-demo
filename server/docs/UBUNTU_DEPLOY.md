@@ -90,8 +90,9 @@ curl -s http://127.0.0.1:8080/iptv/v1/status.json | python3 -m json.tool
 curl -s 'http://127.0.0.1:8080/iptv/v1/status.json?country=CN' | python3 -m json.tool
 ```
 
-首次同步会先浅克隆 iptv-org Git 仓库，耗时取决于服务器到 GitHub 的网络；之后每次同步执行
-`git pull --ff-only`。日志：
+首次启动会先浅克隆 iptv-org Git 仓库，再解析目录并检查播放源，耗时取决于服务器到 GitHub
+和各播放源的网络；之后每天执行 `git pull --ff-only`，每小时重新检查播放源。健康检查结束前
+`/readyz` 和频道接口可能返回 `503`。日志：
 
 ```bash
 sudo journalctl -u home-tv-server -f

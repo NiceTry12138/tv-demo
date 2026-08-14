@@ -8,7 +8,10 @@ services:
       - no-new-privileges:true
     environment:
       IPTV_REPOSITORY_URL: https://github.com/iptv-org/iptv.git
-      SYNC_INTERVAL_HOURS: 6
+      REPOSITORY_UPDATE_INTERVAL_HOURS: 24
+      HEALTH_CHECK_INTERVAL_HOURS: 1
+      HEALTH_CHECK_TIMEOUT_MS: 8000
+      HEALTH_CHECK_CONCURRENCY: 16
       GIT_TIMEOUT_MS: 120000
     ports:
       - "127.0.0.1:8080:8080"

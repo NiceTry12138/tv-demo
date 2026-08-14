@@ -14,7 +14,10 @@ function config(dataDir: string): Config {
     cnPlaylistPath: "countries/cn.m3u",
     host: "127.0.0.1",
     port: 8080,
-    syncIntervalMs: 60_000,
+    repositoryUpdateIntervalMs: 60_000,
+    healthCheckIntervalMs: 60_000,
+    healthCheckTimeoutMs: 1000,
+    healthCheckConcurrency: 2,
     gitTimeoutMs: 1_000,
     dataDir
   };

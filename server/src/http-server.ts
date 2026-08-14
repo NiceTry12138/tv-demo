@@ -3,7 +3,16 @@ import { stat } from "node:fs/promises";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { join } from "node:path";
 import type { Config } from "./config.js";
-import { CN_CHANNELS_FILE, CN_STATUS_FILE, CHANNELS_FILE, isCatalogReady, STATUS_FILE } from "./storage.js";
+import {
+  CN_HEALTH_STATUS_FILE,
+  CN_HEALTHY_CHANNELS_FILE,
+  CN_STATUS_FILE,
+  HEALTH_STATUS_FILE,
+  HEALTHY_CHANNELS_FILE,
+  isCatalogReady,
+  readHealthStatus,
+  STATUS_FILE
+} from "./storage.js";
 
 export function createHttpServer(config: Config): Server {
   return createServer(async (request, response) => {
@@ -19,17 +28,18 @@ export function createHttpServer(config: Config): Server {
       return;
     }
     if (pathname === "/check") {
-      const ready = await isCatalogReady(config.dataDir, CHANNELS_FILE) || await isCatalogReady(config.dataDir, CN_CHANNELS_FILE);
+      const ready = await isCatalogReady(config.dataDir, HEALTHY_CHANNELS_FILE) || await isCatalogReady(config.dataDir, CN_HEALTHY_CHANNELS_FILE);
       sendJson(response, 200, {
         service: "home-tv-server",
         apiVersion: 1,
         status: "ok",
-        catalogReady: ready
+        catalogReady: ready,
+        healthyCatalogReady: ready
       });
       return;
     }
     if (pathname === "/readyz") {
-      const ready = await isCatalogReady(config.dataDir, CHANNELS_FILE) || await isCatalogReady(config.dataDir, CN_CHANNELS_FILE);
+      const ready = await isCatalogReady(config.dataDir, HEALTHY_CHANNELS_FILE) || await isCatalogReady(config.dataDir, CN_HEALTHY_CHANNELS_FILE);
       sendJson(
         response,
         ready ? 200 : 503,
@@ -43,7 +53,7 @@ export function createHttpServer(config: Config): Server {
         sendJson(response, 400, { error: "当前仅支持 country=CN" });
         return;
       }
-      await sendFile(request, response, join(config.dataDir, country === null ? CHANNELS_FILE : CN_CHANNELS_FILE), 300);
+      await sendFile(request, response, join(config.dataDir, country === null ? HEALTHY_CHANNELS_FILE : CN_HEALTHY_CHANNELS_FILE), 300);
       return;
     }
     if (pathname === "/iptv/v1/status.json") {
@@ -53,6 +63,15 @@ export function createHttpServer(config: Config): Server {
         return;
       }
       await sendFile(request, response, join(config.dataDir, country === null ? STATUS_FILE : CN_STATUS_FILE), 0);
+      return;
+    }
+    if (pathname === "/iptv/v1/health-status.json") {
+      const country = url.searchParams.get("country");
+      if (country !== null && !/^CN$/i.test(country)) {
+        sendJson(response, 400, { error: "当前仅支持 country=CN" });
+        return;
+      }
+      sendJson(response, 200, await readHealthStatus(config.dataDir, country === null ? HEALTH_STATUS_FILE : CN_HEALTH_STATUS_FILE));
       return;
     }
     sendJson(response, 404, { error: "Not Found" });

@@ -6,7 +6,7 @@ import { join } from "node:path";
 import test from "node:test";
 import type { Config } from "../src/config.js";
 import { createHttpServer } from "../src/http-server.js";
-import { CN_CHANNELS_FILE, publishCatalog } from "../src/storage.js";
+import { CN_HEALTHY_CHANNELS_FILE, HEALTHY_CHANNELS_FILE, publishCatalog } from "../src/storage.js";
 
 test("HTTP 服务返回健康状态、频道数据和未找到", async () => {
   const directory = await mkdtemp(join(tmpdir(), "home-tv-http-"));
@@ -17,7 +17,10 @@ test("HTTP 服务返回健康状态、频道数据和未找到", async () => {
     cnPlaylistPath: "countries/cn.m3u",
     host: "127.0.0.1",
     port: 0,
-    syncIntervalMs: 60_000,
+      repositoryUpdateIntervalMs: 60_000,
+      healthCheckIntervalMs: 60_000,
+      healthCheckTimeoutMs: 1000,
+      healthCheckConcurrency: 2,
     gitTimeoutMs: 1_000,
     dataDir: directory
   };
@@ -38,7 +41,8 @@ test("HTTP 服务返回健康状态、频道数据和未找到", async () => {
       service: "home-tv-server",
       apiVersion: 1,
       status: "ok",
-      catalogReady: false
+      catalogReady: false,
+      healthyCatalogReady: false
     });
     assert.equal((await get(`${baseUrl}/readyz`)).status, 503);
     assert.equal((await get(`${baseUrl}/iptv/v1/channels.json`)).status, 503);
@@ -47,14 +51,14 @@ test("HTTP 服务返回健康状态、频道数据和未找到", async () => {
     await publishCatalog(directory, {
       version: "v1",
       channels: [{ id: "demo", name: "Demo", logo: null, group: "Test", sources: [] }]
-    });
+    }, HEALTHY_CHANNELS_FILE);
     const response = await get(`${baseUrl}/iptv/v1/channels.json`);
     assert.equal(response.status, 200);
     assert.equal((await response.json() as { version: string }).version, "v1");
     await publishCatalog(directory, {
       version: "cn-v1",
       channels: [{ id: "cn", name: "CN", logo: null, group: "CN", sources: [] }]
-    }, CN_CHANNELS_FILE);
+    }, CN_HEALTHY_CHANNELS_FILE);
     const cnResponse = await get(`${baseUrl}/iptv/v1/channels.json?country=CN`);
     assert.equal(cnResponse.status, 200);
     assert.equal((await cnResponse.json() as { version: string }).version, "cn-v1");

@@ -6,8 +6,8 @@ export interface ChannelSource {
   referrer: string | null;
   geoBlocked: boolean;
   alwaysOn: boolean;
-  status: "unknown";
-  checkedAt: null;
+  status: "unknown" | "healthy" | "unavailable";
+  checkedAt: string | null;
 }
 
 export interface Channel {
@@ -30,6 +30,16 @@ export interface ServiceStatus {
   lastSuccessAt: string | null;
   channelCount: number;
   sourceCount: number;
+  error: string | null;
+}
+
+export interface HealthStatus {
+  state: "starting" | "checking" | "ready" | "error";
+  lastAttemptAt: string | null;
+  lastSuccessAt: string | null;
+  checkedSourceCount: number;
+  healthySourceCount: number;
+  healthyChannelCount: number;
   error: string | null;
 }
 

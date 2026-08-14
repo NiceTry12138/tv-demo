@@ -14,7 +14,8 @@
   "service": "home-tv-server",
   "apiVersion": 1,
   "status": "ok",
-  "catalogReady": true
+  "catalogReady": true,
+  "healthyCatalogReady": true
 }
 ```
 
@@ -27,7 +28,7 @@ GET /iptv/v1/channels.json             全部频道
 GET /iptv/v1/channels.json?country=CN  CN 频道
 ```
 
-`country` 不区分大小写。当前仅支持 `CN`；其他值返回 `400`。对应目录首次同步未完成时返回 `503`。成功响应：
+`country` 不区分大小写。当前仅支持 `CN`；其他值返回 `400`。对应目录首次同步或健康检查尚未完成时返回 `503`。成功响应只包含检查通过的源：
 
 ```json
 {
@@ -47,8 +48,8 @@ GET /iptv/v1/channels.json?country=CN  CN 频道
           "referrer": null,
           "geoBlocked": false,
           "alwaysOn": true,
-          "status": "unknown",
-          "checkedAt": null
+          "status": "healthy",
+          "checkedAt": "2026-08-13T01:00:02.000Z"
         }
       ]
     }
@@ -82,15 +83,34 @@ GET /iptv/v1/channels.json?country=CN  CN 频道
 
 `state`：`starting | syncing | ready | error`。同步失败时，若已有旧目录，频道接口继续返回旧目录。
 
+## `GET /iptv/v1/health-status.json`
+
+返回播放源健康检查统计；增加 `?country=CN` 查询 CN 独立统计。
+
+```json
+{
+  "state": "ready",
+  "lastAttemptAt": "2026-08-13T01:00:02.000Z",
+  "lastSuccessAt": "2026-08-13T01:00:10.000Z",
+  "checkedSourceCount": 530,
+  "healthySourceCount": 78,
+  "healthyChannelCount": 74,
+  "error": null
+}
+```
+
+健康检查使用服务器出口发起 GET，HTTP 2xx 且能读取非空媒体响应才算通过；HLS 会读取播放列表
+并继续检查首个子播放列表或媒体字节。它不能替代 Android TV 播放器的最终验证。
+
 ## 探针
 
 ```text
 GET /healthz  进程能够响应即 200 {"status":"ok"}
 GET /check    App 服务器设置验证，进程正常即 200
-GET /readyz   channels.json 已存在即 200；否则 503
+GET /readyz   健康频道缓存已存在即 200；否则 503
 ```
 
-`readyz` 在同步失败但仍有旧数据时保持 200，因为服务仍可向 App 提供可用目录。
+`readyz` 在同步失败但仍有旧健康缓存时保持 200，因为服务仍可向 App 提供可用目录。
 
 ## 通用状态码
 

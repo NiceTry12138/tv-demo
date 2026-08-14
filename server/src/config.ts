@@ -7,7 +7,10 @@ export interface Config {
   cnPlaylistPath: string;
   host: string;
   port: number;
-  syncIntervalMs: number;
+  repositoryUpdateIntervalMs: number;
+  healthCheckIntervalMs: number;
+  healthCheckTimeoutMs: number;
+  healthCheckConcurrency: number;
   gitTimeoutMs: number;
   dataDir: string;
 }
@@ -40,7 +43,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     cnPlaylistPath: env.IPTV_CN_PLAYLIST_PATH ?? "countries/cn.m3u",
     host: env.HOST ?? "0.0.0.0",
     port: portNumber(env.PORT),
-    syncIntervalMs: positiveNumber("SYNC_INTERVAL_HOURS", env.SYNC_INTERVAL_HOURS, 6) * 3_600_000,
+    repositoryUpdateIntervalMs: positiveNumber("REPOSITORY_UPDATE_INTERVAL_HOURS", env.REPOSITORY_UPDATE_INTERVAL_HOURS, 24) * 3_600_000,
+    healthCheckIntervalMs: positiveNumber("HEALTH_CHECK_INTERVAL_HOURS", env.HEALTH_CHECK_INTERVAL_HOURS, 1) * 3_600_000,
+    healthCheckTimeoutMs: positiveNumber("HEALTH_CHECK_TIMEOUT_MS", env.HEALTH_CHECK_TIMEOUT_MS, 8_000),
+    healthCheckConcurrency: positiveNumber("HEALTH_CHECK_CONCURRENCY", env.HEALTH_CHECK_CONCURRENCY, 16),
     gitTimeoutMs: positiveNumber("GIT_TIMEOUT_MS", env.GIT_TIMEOUT_MS, 120_000),
     dataDir
   };

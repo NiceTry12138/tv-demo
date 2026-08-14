@@ -10,7 +10,6 @@ export type PlaylistReader = (relativePath: string) => Promise<string>;
 
 export function createPlaylistReader(config: Config): PlaylistReader {
   return async (relativePath) => {
-    await ensureRepository(config);
     const path = resolve(config.repositoryDir, relativePath);
     const safeRelativePath = relative(resolve(config.repositoryDir), path);
     if (!safeRelativePath || safeRelativePath.startsWith("..") || isAbsolute(safeRelativePath)) {
