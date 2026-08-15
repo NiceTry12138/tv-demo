@@ -16,17 +16,14 @@ import {
 
 function config(dataDir: string): Config {
   return {
-    repositoryUrl: "https://example.com/iptv.git",
-    repositoryDir: join(dataDir, "iptv-org"),
-    allPlaylistPath: "index.m3u",
-    cnPlaylistPath: "countries/cn.m3u",
     host: "127.0.0.1",
     port: 8080,
-    repositoryUpdateIntervalMs: 86_400_000,
     healthCheckIntervalMs: 3_600_000,
     healthCheckTimeoutMs: 1000,
     healthCheckConcurrency: 2,
-    gitTimeoutMs: 1000,
+    adminUsername: "cong01",
+    adminPassword: "secret",
+    maxUploadBytes: 1_000_000,
     dataDir
   };
 }

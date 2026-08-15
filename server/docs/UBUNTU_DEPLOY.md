@@ -76,10 +76,30 @@ sudo cp /opt/tv-demo/server/deploy/systemd/home-tv-server.service \
   /etc/systemd/system/home-tv-server.service
 sudo chmod 640 /etc/home-tv-server.env
 sudo chown root:home-tv /etc/home-tv-server.env
+sudo editor /etc/home-tv-server.env
 sudo systemctl daemon-reload
 sudo systemctl enable --now home-tv-server
 sudo systemctl status home-tv-server --no-pager
 ```
+
+编辑时必须设置管理密码：
+
+```properties
+ADMIN_USERNAME=cong01
+ADMIN_PASSWORD=你的管理密码
+```
+
+不要把真实密码提交到 Git。管理接口使用 Basic Auth，必须通过后续 Nginx HTTPS 访问。
+
+只有公网 IP、没有域名时，不要把管理接口暴露在公网 HTTP。保持 `HOST=127.0.0.1`，从本机建立
+SSH 隧道：
+
+```powershell
+ssh -L 18080:127.0.0.1:8080 ubuntu@服务器IP
+```
+
+再访问 `http://127.0.0.1:18080/admin`，或让上传脚本连接
+`http://127.0.0.1:18080`。管理接口会拒绝非本机的 HTTP 请求。
 
 检查本机接口：
 
@@ -90,15 +110,14 @@ curl -s http://127.0.0.1:8080/iptv/v1/status.json | python3 -m json.tool
 curl -s 'http://127.0.0.1:8080/iptv/v1/status.json?country=CN' | python3 -m json.tool
 ```
 
-首次启动会先浅克隆 iptv-org Git 仓库，再解析目录并检查播放源，耗时取决于服务器到 GitHub
-和各播放源的网络；之后每天执行 `git pull --ff-only`，每小时重新检查播放源。健康检查结束前
-`/readyz` 和频道接口可能返回 `503`。日志：
+服务器不访问 GitHub 或频道目录来源。首次上传频道前，`/readyz` 和频道接口返回 `503`；上传后
+立即检查，之后每小时重新检查。日志：
 
 ```bash
 sudo journalctl -u home-tv-server -f
 ```
 
-频道数据和 iptv-org 本地仓库均保存在 `/var/lib/home-tv-server`，代码更新不会删除它。
+上传目录和健康缓存保存在 `/var/lib/home-tv-server`，代码更新不会删除它。
 
 ### 局域网 IP + 端口直连（调试）
 
@@ -156,13 +175,39 @@ curl -i https://你的真实域名/iptv/v1/channels.json
 curl -i 'https://你的真实域名/iptv/v1/channels.json?country=CN'
 ```
 
+浏览器打开：
+
+```text
+https://你的真实域名/admin
+```
+
+输入 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 后，可选择本机生成的 JSON 并上传。
+
+## 6. 在本机收集并上传频道
+
+本步骤在能够访问频道目录来源的 Windows/macOS/Linux 电脑执行，不在 Ubuntu 服务器执行。
+需要 Python 3.10+，无第三方依赖：
+
+```powershell
+cd server
+$env:TV_ADMIN_PASSWORD="你的管理密码"
+python tools/collect_and_upload.py `
+  --server https://你的真实域名 `
+  --username cong01
+```
+
+默认收集 iptv-org、fanmingming/live、YueChan/Live、live.zbds.top 和
+tv.iill.top/m3u/Gather。脚本按流 URL 去重，在本机以 GET 并发检查，只上传通过源。默认单源
+超时 8 秒、16 并发，可用 `--check-timeout`、`--check-workers` 调整。零个源通过时不写文件、
+不上传。服务器收到后再次检查并每小时复查，因为本机、服务器和电视网络出口可能不同。
+
 App 配置：
 
 ```properties
 CHANNELS_URL=https://你的真实域名/iptv/v1/channels.json
 ```
 
-## 6. 更新版本
+## 7. 更新版本
 
 ```bash
 cd /opt/tv-demo
@@ -177,13 +222,14 @@ curl -i http://127.0.0.1:8080/readyz
 
 若新版本失败，可切回上一 Git 提交并重新构建。频道运行数据位于 `/var/lib`，不会被覆盖。
 
-## 7. Docker 方法
+## 8. Docker 方法
 
 已安装 Docker Engine 和 Compose Plugin 时：
 
 ```bash
 cd /opt/tv-demo/server
-sudo docker compose up -d --build
+export ADMIN_PASSWORD='你的管理密码'
+sudo --preserve-env=ADMIN_PASSWORD docker compose up -d --build
 sudo docker compose ps
 curl -i http://127.0.0.1:8080/readyz
 ```

@@ -1,47 +1,38 @@
 import { loadConfig } from "./config.js";
 import { createHttpServer } from "./http-server.js";
 import { CatalogHealthChecker } from "./health-checker.js";
-import { ensureRepository } from "./repository.js";
-import { CatalogSynchronizer } from "./synchronizer.js";
 
 const config = loadConfig();
-const synchronizer = new CatalogSynchronizer(config);
 const healthChecker = new CatalogHealthChecker(config);
-const server = createHttpServer(config);
+let healthQueue = Promise.resolve();
+const server = createHttpServer(config, async (result) => {
+  console.log(`[upload] 已保存 ${result.channelCount} 个频道，CN ${result.cnChannelCount} 个频道`);
+  await enqueueHealthCheck();
+});
 
-async function refresh(): Promise<void> {
-  try {
-    await ensureRepository(config);
-    const status = await synchronizer.sync();
-    console.log(`[sync] ${status.lastSuccessAt}: ${status.channelCount} 个频道，${status.sourceCount} 个源`);
-  } catch (error) {
-    console.error("[sync] 失败，继续提供上次成功数据：", error);
-  }
-  await checkHealth();
-}
-
-async function checkHealth(): Promise<void> {
-  try {
-    const result = await healthChecker.check();
-    console.log(`[health] 全量 ${result.all.healthyChannelCount} 个频道/${result.all.healthySourceCount} 个源，CN ${result.cn.healthyChannelCount} 个频道/${result.cn.healthySourceCount} 个源`);
-  } catch (error) {
-    console.error("[health] 检查失败：", error);
-  }
+function enqueueHealthCheck(): Promise<void> {
+  healthQueue = healthQueue.then(async () => {
+    try {
+      const result = await healthChecker.check();
+      console.log(`[health] 全量 ${result.all.healthyChannelCount} 个频道/${result.all.healthySourceCount} 个源，CN ${result.cn.healthyChannelCount} 个频道/${result.cn.healthySourceCount} 个源`);
+    } catch (error) {
+      console.error("[health] 检查失败：", error);
+    }
+  });
+  return healthQueue;
 }
 
 server.listen(config.port, config.host, () => {
   console.log(`[http] http://${config.host}:${config.port}`);
-  void refresh();
+  console.log(`[admin] 用户名 ${config.adminUsername}，${config.adminPassword ? "已启用" : "未配置 ADMIN_PASSWORD"}`);
+  void enqueueHealthCheck();
 });
 
-const repositoryTimer = setInterval(() => void refresh(), config.repositoryUpdateIntervalMs);
-const healthTimer = setInterval(() => void checkHealth(), config.healthCheckIntervalMs);
-repositoryTimer.unref();
+const healthTimer = setInterval(() => void enqueueHealthCheck(), config.healthCheckIntervalMs);
 healthTimer.unref();
 
 function shutdown(signal: string): void {
   console.log(`[http] 收到 ${signal}，停止服务`);
-  clearInterval(repositoryTimer);
   clearInterval(healthTimer);
   server.close((error) => {
     if (error) {

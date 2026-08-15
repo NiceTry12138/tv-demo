@@ -1,17 +1,14 @@
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 
 export interface Config {
-  repositoryUrl: string;
-  repositoryDir: string;
-  allPlaylistPath: string;
-  cnPlaylistPath: string;
   host: string;
   port: number;
-  repositoryUpdateIntervalMs: number;
   healthCheckIntervalMs: number;
   healthCheckTimeoutMs: number;
   healthCheckConcurrency: number;
-  gitTimeoutMs: number;
+  adminUsername: string;
+  adminPassword: string;
+  maxUploadBytes: number;
   dataDir: string;
 }
 
@@ -32,22 +29,18 @@ function portNumber(value: string | undefined): number {
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
-  const repositoryUrl = env.IPTV_REPOSITORY_URL ?? "https://github.com/iptv-org/iptv.git";
-  if (!/^https?:\/\//i.test(repositoryUrl)) throw new Error("IPTV_REPOSITORY_URL 必须是 HTTP 或 HTTPS 地址");
   const dataDir = resolve(env.DATA_DIR ?? "./data");
+  const adminUsername = env.ADMIN_USERNAME?.trim() || "cong01";
 
   return {
-    repositoryUrl,
-    repositoryDir: resolve(env.IPTV_REPOSITORY_DIR ?? join(dataDir, "iptv-org")),
-    allPlaylistPath: env.IPTV_ALL_PLAYLIST_PATH ?? "index.m3u",
-    cnPlaylistPath: env.IPTV_CN_PLAYLIST_PATH ?? "countries/cn.m3u",
     host: env.HOST ?? "0.0.0.0",
     port: portNumber(env.PORT),
-    repositoryUpdateIntervalMs: positiveNumber("REPOSITORY_UPDATE_INTERVAL_HOURS", env.REPOSITORY_UPDATE_INTERVAL_HOURS, 24) * 3_600_000,
     healthCheckIntervalMs: positiveNumber("HEALTH_CHECK_INTERVAL_HOURS", env.HEALTH_CHECK_INTERVAL_HOURS, 1) * 3_600_000,
     healthCheckTimeoutMs: positiveNumber("HEALTH_CHECK_TIMEOUT_MS", env.HEALTH_CHECK_TIMEOUT_MS, 8_000),
     healthCheckConcurrency: positiveNumber("HEALTH_CHECK_CONCURRENCY", env.HEALTH_CHECK_CONCURRENCY, 16),
-    gitTimeoutMs: positiveNumber("GIT_TIMEOUT_MS", env.GIT_TIMEOUT_MS, 120_000),
+    adminUsername,
+    adminPassword: env.ADMIN_PASSWORD ?? "",
+    maxUploadBytes: positiveNumber("MAX_UPLOAD_BYTES", env.MAX_UPLOAD_BYTES, 25 * 1024 * 1024),
     dataDir
   };
 }

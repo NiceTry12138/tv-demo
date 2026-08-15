@@ -52,3 +52,12 @@ export interface PlaylistEntry {
   userAgent: string | null;
   referrer: string | null;
 }
+
+export interface UploadedEntry extends PlaylistEntry {
+  country: string;
+}
+
+export interface UploadCatalog {
+  generatedAt?: string;
+  entries: UploadedEntry[];
+}

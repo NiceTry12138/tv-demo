@@ -26,8 +26,9 @@ $env:ANDROID_HOME="$env:LOCALAPPDATA\Android\Sdk"
 
 ## Server
 
-`server/` 使用 Node.js 22 和 TypeScript。它每天更新 iptv-org Git 仓库，每小时从服务器出口检查播放源，
-只把健康源缓存并提供给 App。原始目录和健康目录分离，整轮检查失败时保留上一份健康数据。它不转发视频流。
+`server/` 使用 Node.js 22 和 TypeScript。管理员在能访问上游的电脑运行 Python 脚本收集、去重
+并本地检查，只将通过源经受密码保护的 Web/HTTP 接口上传。服务器不访问 GitHub；上传后立即
+二次检查，每小时复查，只把健康源缓存并提供给 App。它不转发视频流。
 当前对外 API 使用 GET，便于本地调试；GET 本身不提供身份认证。
 
 开发运行：
@@ -45,6 +46,8 @@ npm run dev
 - `GET /iptv/v1/channels.json?country=CN`
 - `GET /iptv/v1/status.json`
 - `GET /iptv/v1/health-status.json`
+- `GET /admin`（管理页面，需要 Basic Auth）
+- `POST /admin/catalog`（上传目录，需要 Basic Auth）
 - `GET /healthz`
 - `GET /readyz`
 

@@ -11,20 +11,18 @@ import { CN_HEALTHY_CHANNELS_FILE, HEALTHY_CHANNELS_FILE, publishCatalog } from 
 test("HTTP 服务返回健康状态、频道数据和未找到", async () => {
   const directory = await mkdtemp(join(tmpdir(), "home-tv-http-"));
   const config: Config = {
-    repositoryUrl: "https://example.com/iptv.git",
-    repositoryDir: join(directory, "iptv-org"),
-    allPlaylistPath: "index.m3u",
-    cnPlaylistPath: "countries/cn.m3u",
     host: "127.0.0.1",
     port: 0,
-      repositoryUpdateIntervalMs: 60_000,
-      healthCheckIntervalMs: 60_000,
-      healthCheckTimeoutMs: 1000,
-      healthCheckConcurrency: 2,
-    gitTimeoutMs: 1_000,
+    healthCheckIntervalMs: 60_000,
+    healthCheckTimeoutMs: 1000,
+    healthCheckConcurrency: 2,
+    adminUsername: "cong01",
+    adminPassword: "secret",
+    maxUploadBytes: 1_000_000,
     dataDir: directory
   };
-  const server = createHttpServer(config);
+  let uploads = 0;
+  const server = createHttpServer(config, () => { uploads++; });
   try {
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     const port = (server.address() as AddressInfo).port;
@@ -47,6 +45,22 @@ test("HTTP 服务返回健康状态、频道数据和未找到", async () => {
     assert.equal((await get(`${baseUrl}/readyz`)).status, 503);
     assert.equal((await get(`${baseUrl}/iptv/v1/channels.json`)).status, 503);
     assert.equal((await get(`${baseUrl}/iptv/v1/channels.json?country=CN`)).status, 503);
+
+    assert.equal((await get(`${baseUrl}/admin`)).status, 401);
+    assert.equal((await get(`${baseUrl}/admin`, { headers: { "X-Forwarded-Proto": "http" } })).status, 401);
+    assert.equal((await get(`${baseUrl}/admin`, { headers: { Authorization: "Basic invalid" } })).status, 401);
+    const authorization = `Basic ${Buffer.from("cong01:secret").toString("base64")}`;
+    const adminPage = await get(`${baseUrl}/admin`, { headers: { Authorization: authorization } });
+    assert.equal(adminPage.status, 200);
+    assert.match(await adminPage.text(), /频道目录管理/);
+    const upload = await fetch(`${baseUrl}/admin/catalog`, {
+      method: "POST",
+      headers: { Authorization: authorization, "Content-Type": "application/json" },
+      body: JSON.stringify({ entries: [{ name: "CN Demo", url: "https://example.com/live.m3u8", country: "CN" }] })
+    });
+    assert.equal(upload.status, 202);
+    assert.equal((await upload.json() as { cnChannelCount: number }).cnChannelCount, 1);
+    assert.equal(uploads, 1);
 
     await publishCatalog(directory, {
       version: "v1",

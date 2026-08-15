@@ -1,13 +1,53 @@
 # HTTP API
 
 服务默认只监听 `127.0.0.1:8080`（生产 systemd 配置），公网由 Nginx 提供 HTTPS。
-所有接口只读，当前仅接受 `GET`，便于本地调试。需要真正限制访问时，应增加 token/API key，
-并由 App 通过请求头发送。
+Android TV 和状态接口使用 `GET`。管理页面与上传接口使用 HTTP Basic Auth；必须通过 HTTPS
+或 SSH 隧道访问。公网 HTTP 请求会返回 `426`，避免用户名和密码被明文截获。
+
+## `GET /admin`
+
+频道目录管理页面。浏览器会要求输入管理员用户名和密码。默认用户名是 `cong01`；密码由
+服务器环境变量 `ADMIN_PASSWORD` 设置，代码和示例配置不保存明文密码。
+
+## `POST /admin/catalog`
+
+上传本机收集脚本生成的 JSON，需要 Basic Auth 和 `Content-Type: application/json`。成功保存
+原始全量/CN 目录后返回 `202`，并立即在后台启动健康检查。旧健康缓存会继续提供给 App，直到
+新检查成功完成。
+
+```json
+{
+  "generatedAt": "2026-08-15T01:00:00Z",
+  "entries": [
+    {
+      "name": "CCTV-1",
+      "url": "https://example.com/live.m3u8",
+      "country": "CN",
+      "tvgId": "CCTV1.cn",
+      "logo": null,
+      "group": "央视",
+      "userAgent": null,
+      "referrer": null
+    }
+  ]
+}
+```
+
+`name`、HTTP(S) `url`、两位 `country` 必填。服务器再次按 URL 去重。成功响应：
+
+```json
+{
+  "importedSourceCount": 530,
+  "channelCount": 380,
+  "cnChannelCount": 380,
+  "healthCheck": "started"
+}
+```
 
 ## `GET /check`
 
 供 Android TV 设置界面验证输入的 IP 和端口确实指向本服务。只验证服务身份；即使首份频道
-目录尚未同步完成也返回 `200`，由 `catalogReady` 表示数据状态。
+目录尚未上传或健康检查未完成也返回 `200`，由 `catalogReady` 表示数据状态。
 
 ```json
 {
@@ -28,7 +68,7 @@ GET /iptv/v1/channels.json             全部频道
 GET /iptv/v1/channels.json?country=CN  CN 频道
 ```
 
-`country` 不区分大小写。当前仅支持 `CN`；其他值返回 `400`。对应目录首次同步或健康检查尚未完成时返回 `503`。成功响应只包含检查通过的源：
+`country` 不区分大小写。当前仅支持 `CN`；其他值返回 `400`。对应目录首次上传或健康检查尚未完成时返回 `503`。成功响应只包含检查通过的源：
 
 ```json
 {
@@ -67,12 +107,13 @@ GET /iptv/v1/channels.json?country=CN  CN 频道
 
 ## `GET /iptv/v1/status.json`
 
-全量同步状态，不是 App 播放依赖。增加 `?country=CN` 读取 CN 独立状态。`Cache-Control: no-store`。
+最近一次管理员上传状态，不是 App 播放依赖。增加 `?country=CN` 读取 CN 独立状态。
+`Cache-Control: no-store`。
 
 ```json
 {
   "state": "ready",
-  "upstream": "https://iptv-org.github.io/iptv/countries/cn.m3u",
+  "upstream": "admin-upload",
   "lastAttemptAt": "2026-08-13T01:00:00.000Z",
   "lastSuccessAt": "2026-08-13T01:00:01.000Z",
   "channelCount": 149,
@@ -81,7 +122,7 @@ GET /iptv/v1/channels.json?country=CN  CN 频道
 }
 ```
 
-`state`：`starting | syncing | ready | error`。同步失败时，若已有旧目录，频道接口继续返回旧目录。
+服务器不会主动访问 GitHub 或目录来源。上传失败不会覆盖已有目录。
 
 ## `GET /iptv/v1/health-status.json`
 
@@ -110,7 +151,7 @@ GET /check    App 服务器设置验证，进程正常即 200
 GET /readyz   健康频道缓存已存在即 200；否则 503
 ```
 
-`readyz` 在同步失败但仍有旧健康缓存时保持 200，因为服务仍可向 App 提供可用目录。
+`readyz` 在新检查失败但仍有旧健康缓存时保持 200，因为服务仍可向 App 提供可用目录。
 
 ## 通用状态码
 
@@ -120,6 +161,10 @@ GET /readyz   健康频道缓存已存在即 200；否则 503
 | `304` | ETag 未变化 |
 | `400` | 不支持的 `country` 参数 |
 | `404` | 路径不存在 |
-| `405` | 只允许 GET |
+| `401` | 管理接口用户名或密码错误 |
+| `405` | 请求方法错误 |
+| `413` | 上传内容超过限制 |
+| `415` | 上传接口不是 JSON |
+| `426` | 管理接口未使用 HTTPS/本机连接 |
 | `500` | 本地数据读取异常 |
 | `503` | 首份频道目录尚未生成 |

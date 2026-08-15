@@ -7,12 +7,12 @@ services:
     security_opt:
       - no-new-privileges:true
     environment:
-      IPTV_REPOSITORY_URL: https://github.com/iptv-org/iptv.git
-      REPOSITORY_UPDATE_INTERVAL_HOURS: 24
       HEALTH_CHECK_INTERVAL_HOURS: 1
       HEALTH_CHECK_TIMEOUT_MS: 8000
       HEALTH_CHECK_CONCURRENCY: 16
-      GIT_TIMEOUT_MS: 120000
+      ADMIN_USERNAME: cong01
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD must be set}
+      MAX_UPLOAD_BYTES: 26214400
     ports:
       - "127.0.0.1:8080:8080"
     volumes:
